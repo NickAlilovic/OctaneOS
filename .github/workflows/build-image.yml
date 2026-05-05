@@ -117,6 +117,28 @@ jobs:
           key: buildroot-build-v2-${{ hashFiles('configs/batocera-a733-cubie-a7s.board') }}-${{ github.run_id }}
           restore-keys: buildroot-build-v2-${{ hashFiles('configs/batocera-a733-cubie-a7s.board') }}-
 
+      - name: Re-unify staging and sysroot after cache restore
+        run: |
+          SYSROOT="${{ env.BR_OUTPUT_DIR }}/host/aarch64-buildroot-linux-gnu/sysroot"
+          STAGING="${{ env.BR_OUTPUT_DIR }}/staging"
+          # actions/cache expands symlinks when archiving, so staging/ and sysroot/ are
+          # restored as two independent directories even if they were the same symlink
+          # at save time. Re-unify them: sync staging content into sysroot, then replace
+          # staging with a symlink so Buildroot's STAGING_DIR and the cross-linker sysroot
+          # point to the same directory going forward.
+          if [ -d "$STAGING" ] && [ ! -L "$STAGING" ] && [ -d "$SYSROOT" ]; then
+            echo "Syncing staging into sysroot..."
+            rsync -a "$STAGING/" "$SYSROOT/"
+            rm -rf "$STAGING"
+            ln -sf "host/aarch64-buildroot-linux-gnu/sysroot" "$STAGING"
+            echo "staging -> sysroot symlink created"
+          elif [ -d "$SYSROOT" ] && [ ! -d "$STAGING" ]; then
+            ln -sf "host/aarch64-buildroot-linux-gnu/sysroot" "$STAGING"
+            echo "staging -> sysroot symlink created (staging was missing)"
+          else
+            echo "staging/sysroot state: staging=$([ -L "$STAGING" ] && echo symlink || echo dir/missing) sysroot=$([ -d "$SYSROOT" ] && echo present || echo missing)"
+          fi
+
       - name: Pre-fetch tarballs that have flaky mirrors
         run: |
           mkdir -p batocera/dl
