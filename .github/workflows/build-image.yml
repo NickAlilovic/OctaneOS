@@ -103,7 +103,7 @@ jobs:
         uses: actions/cache/restore@v4
         with:
           path: ${{ env.BR_OUTPUT_DIR }}/host
-          key: buildroot-host-v4-${{ hashFiles('configs/batocera-a733-cubie-a7s.board') }}-${{ hashFiles('batocera/buildroot/toolchain/**/*.mk') }}
+          key: buildroot-host-v4-${{ hashFiles('configs/batocera-a733-cubie-a7s.board') }}-${{ github.run_id }}
           restore-keys: |
             buildroot-host-v4-
 
@@ -362,7 +362,7 @@ jobs:
         if: always()
         with:
           path: ${{ env.BR_OUTPUT_DIR }}/host
-          key: buildroot-host-v4-${{ hashFiles('configs/batocera-a733-cubie-a7s.board') }}-${{ hashFiles('batocera/buildroot/toolchain/**/*.mk') }}
+          key: buildroot-host-v4-${{ hashFiles('configs/batocera-a733-cubie-a7s.board') }}-${{ github.run_id }}
 
       - name: Save Buildroot build output cache
         id: save-build-cache
@@ -379,9 +379,13 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          CURRENT_KEY="buildroot-build-v2-${{ hashFiles('configs/batocera-a733-cubie-a7s.board') }}-${{ github.run_id }}"
+          CURRENT_BUILD_KEY="buildroot-build-v2-${{ hashFiles('configs/batocera-a733-cubie-a7s.board') }}-${{ github.run_id }}"
+          CURRENT_HOST_KEY="buildroot-host-v4-${{ hashFiles('configs/batocera-a733-cubie-a7s.board') }}-${{ github.run_id }}"
           gh api repos/${{ github.repository }}/actions/caches \
-            --jq ".actions_caches[] | select(.key | startswith(\"buildroot-build-v2-\")) | select(.key != \"$CURRENT_KEY\") | .id" \
+            --jq ".actions_caches[] | select(
+              (.key | startswith(\"buildroot-build-v2-\")) or
+              (.key | startswith(\"buildroot-host-v4-\"))
+            ) | select(.key != \"$CURRENT_BUILD_KEY\" and .key != \"$CURRENT_HOST_KEY\") | .id" \
             | while read id; do
               gh api --method DELETE repos/${{ github.repository }}/actions/caches/$id || true
             done
