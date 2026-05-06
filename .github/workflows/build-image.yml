@@ -50,7 +50,8 @@ jobs:
             libncurses-dev libssl-dev \
             python3 python3-dev \
             unzip file bison flex gawk whiptail \
-            dosfstools mtools
+            dosfstools mtools \
+            u-boot-tools
 
       - name: Set up symlinks (non-interactive)
         run: |
