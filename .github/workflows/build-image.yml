@@ -51,7 +51,8 @@ jobs:
             python3 python3-dev \
             unzip file bison flex gawk whiptail \
             dosfstools mtools \
-            u-boot-tools
+            u-boot-tools \
+            gettext
 
       - name: Set up symlinks (non-interactive)
         run: |
@@ -258,11 +259,12 @@ jobs:
           fi
           # target/ is not cached between runs, so the filesystem skeleton must always
           # re-run to recreate base dirs (usr/bin, etc/udev/rules.d, lib/modules, etc.).
-          # Without this, packages that assume the skeleton ran will fail with
-          # "No such file or directory" on every fresh target/.
+          # Also remove .files-list*.before so Buildroot's install tracking doesn't fail
+          # trying to diff against a snapshot that no longer exists.
           find "${{ env.BR_OUTPUT_DIR }}/build" -maxdepth 1 \
             \( -name "skeleton*" -o -name "skeleton-init-*" \) \
-            -exec rm -f {}/.stamp_target_installed \; 2>/dev/null || true
+            -exec sh -c 'rm -f "$1"/.stamp_target_installed "$1"/.files-list*.before' _ {} \; \
+            2>/dev/null || true
           # If libz.so is missing the sysroot is essentially empty — the toolchain cache
           # was saved before target packages were installed. Clear all fast target package
           # stamps (excluding heavyweight packages that take hours) so buildroot reinstalls
