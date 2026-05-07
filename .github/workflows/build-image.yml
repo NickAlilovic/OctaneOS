@@ -304,7 +304,7 @@ jobs:
                 # WebKit packages take longer than one CI window to compile.
                 # Leave them intact so ninja can resume across runs.
                 case "$pkg_name" in
-                  webkitgtk-*|wpewebkit-*|qt6*|ryujinx-*|dolphin-*|ppsspp-*|pcsx2-*|rpcs3-*)
+                  webkitgtk-*|wpewebkit-*|qt6*|ryujinx-*|dolphin-*|ppsspp-*|pcsx2-*|rpcs3-*|mame-*)
                     echo "Leaving partial large package build intact for resume: $pkg_name"
                     ;;
                   *)
