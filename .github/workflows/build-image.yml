@@ -383,7 +383,7 @@ jobs:
           echo "=== Disk free ==="
           df -h /
 
-      - name: Strip fully-installed packages to stamps only
+      - name: Strip object files from fully-installed packages
         if: always()
         run: |
           BUILD_DIR="${{ env.BR_OUTPUT_DIR }}/build"
@@ -395,12 +395,7 @@ jobs:
           du -sh "$BUILD_DIR" || true
           find "$BUILD_DIR" -maxdepth 1 -mindepth 1 -type d | while read pkg_dir; do
             if [ -f "$pkg_dir/.stamp_installed" ]; then
-              tmp=$(mktemp -d)
-              find "$pkg_dir" -maxdepth 1 \( -name ".stamp_*" -o -name ".files-list*" \) -exec cp {} "$tmp/" \; 2>/dev/null || true
-              rm -rf "$pkg_dir"
-              mkdir -p "$pkg_dir"
-              cp "$tmp"/. "$pkg_dir/" 2>/dev/null || true
-              rm -rf "$tmp"
+              find "$pkg_dir" -type f \( -name "*.o" -o -name "*.lo" \) -delete 2>/dev/null || true
             fi
           done
           echo "=== Cache size after cleanup ==="
