@@ -365,7 +365,7 @@ jobs:
           fi
 
           exit $BUILD_STATUS
-        timeout-minutes: 300
+        timeout-minutes: 90
         continue-on-error: true
 
       - name: Pre-cache diagnostics and process cleanup
