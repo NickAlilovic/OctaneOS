@@ -60,6 +60,20 @@ export MAKEFLAGS="\$_mf"
 exec ${REAL_MAKE} "\$@"
 SHIM_EOF
 chmod +x "${SHIM_DIR}/make"
+
+# When running inside Flatpak, /run/host/usr/bin/x86_64-pc-linux-gnu-gcc is the
+# SteamOS host GCC 14.2.1. Its cc1 depends on libisl.so.23 which is absent from
+# the Flatpak runtime, causing autoconf C89/C99 conformance probes to fail with
+# "error while loading shared libraries: libisl.so.23". Mask the broken triplet-
+# prefixed compilers with symlinks to the working Flatpak GCC in the shim dir,
+# which sits at the front of PATH.
+if [ -n "${FLATPAK_ID}" ]; then
+    ln -sf /usr/bin/gcc  "${SHIM_DIR}/x86_64-pc-linux-gnu-gcc"
+    ln -sf /usr/bin/g++  "${SHIM_DIR}/x86_64-pc-linux-gnu-g++"
+    ln -sf /usr/bin/gcc  "${SHIM_DIR}/x86_64-unknown-linux-gnu-gcc"
+    ln -sf /usr/bin/g++  "${SHIM_DIR}/x86_64-unknown-linux-gnu-g++"
+fi
+
 export PATH="${SHIM_DIR}:${PATH}"
 trap 'rm -rf "${SHIM_DIR}"' EXIT
 
