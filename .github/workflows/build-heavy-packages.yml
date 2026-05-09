@@ -5,13 +5,7 @@ name: Build heavy packages (same-cdi, ecwolf)
 # the local build via local.mk pre-built overrides.
 
 on:
-  workflow_dispatch:        # manual trigger from GitHub UI
-  push:
-    paths:
-      - 'board/batocera/allwinner/a733/local.mk'
-      - 'batocera/package/batocera/ports/ecwolf/**'
-      - 'batocera/package/batocera/emulators/retroarch/libretro/libretro-same-cdi/**'
-      - '.github/workflows/build-heavy-packages.yml'
+  workflow_dispatch:   # manual trigger only — building locally on Steam Deck
 
 env:
   # OUTPUT_DIR is the env var batocera's Makefile uses for O (passed to

@@ -6,14 +6,7 @@ name: Build OctaneOS image (a733-cubie-a7s)
 # RAM to handle MAME. Local WSL2 builds disable same-cdi via local.mk.
 
 on:
-  workflow_dispatch:
-  push:
-    branches:
-      - main
-    paths-ignore:
-      - 'README.md'
-      - 'CONTRIBUTING.md'
-      - '.github/workflows/build-heavy-packages.yml'
+  workflow_dispatch:   # manual trigger only — building locally on Steam Deck
 
 env:
   OUTPUT_DIR: batocera/output/a733-cubie-a7s

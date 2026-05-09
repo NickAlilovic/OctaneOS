@@ -66,6 +66,16 @@ trap 'rm -rf "${SHIM_DIR}"' EXIT
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
 # -----------------------------------------------------------------------------
+# When running inside a Flatpak (e.g. VS Code on SteamOS), the Flatpak has a
+# working host-native GCC but is missing tools installed on the host via
+# pacman (rsync, mtools, bc, etc.). The host filesystem is bind-mounted at
+# /run/host — prepend its bin dirs so those tools are visible to the build.
+# -----------------------------------------------------------------------------
+if [ -d "/run/host/usr/bin" ]; then
+    export PATH="/run/host/usr/bin:/run/host/usr/local/bin:${PATH}"
+fi
+
+# -----------------------------------------------------------------------------
 # Add the Buildroot host/bin to PATH so host tools (mkimage, etc.) installed
 # by Buildroot packages are available to post-install scripts that call them
 # as bare commands without a full path.
