@@ -1,0 +1,5 @@
+#!/bin/bash
+# CMake 4.0 dropped support for cmake_minimum_required < 3.5.
+# This wrapper transparently adds -DCMAKE_POLICY_VERSION_MINIMUM=3.5 so that
+# older packages (hiredis, etc.) configure without errors.
+exec /usr/bin/cmake -DCMAKE_POLICY_VERSION_MINIMUM=3.5 "$@"

@@ -1,4 +1,10 @@
 # OctaneOS build overrides
+
+# CMake 4.0 dropped compatibility with cmake_minimum_required < 3.5.
+# BR2_CMAKE uses ?= so we can override it here. Point it to a thin wrapper
+# that adds -DCMAKE_POLICY_VERSION_MINIMUM=3.5 to every cmake invocation,
+# fixing all affected packages (hiredis, etc.) globally.
+BR2_CMAKE = $(BR2_EXTERNAL)/../scripts/host-cmake-compat
 # host-ruby 3.3.5 gc.c triggers -Wformat= errors on GCC 12+ due to PRIdSIZE
 # expanding incorrectly. Pass --disable-werror so the build doesn't abort.
 HOST_RUBY_CONF_OPTS += --disable-werror
