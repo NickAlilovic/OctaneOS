@@ -1,12 +1,14 @@
 #!/bin/bash
 # =============================================================================
 # OctaneOS build environment setup
-# Run this INSIDE WSL2 (Ubuntu 22.04 recommended), NOT on Windows directly.
-# The Batocera build system requires a Linux host.
+# Supports: Ubuntu/Debian (GitHub Actions, WSL2), Arch/SteamOS (Steam Deck)
 #
 # Usage:
 #   chmod +x scripts/setup-build-env.sh
 #   ./scripts/setup-build-env.sh
+#
+# SteamOS note: run  sudo steamos-readonly disable  before this script,
+# then  sudo steamos-readonly enable  after if desired.
 # =============================================================================
 
 set -e
@@ -43,27 +45,58 @@ if [[ "$(pwd)" == /mnt/* ]]; then
 fi
 
 # -----------------------------------------------------------------------------
-# 3. Install build dependencies (Ubuntu/Debian)
+# 3. Install build dependencies — detects Ubuntu/Debian vs Arch/SteamOS
 # -----------------------------------------------------------------------------
 echo "[INFO] Installing build dependencies..."
-sudo apt-get update
-sudo apt-get install -y \
-    bc \
-    bison \
-    build-essential \
-    cpio \
-    file \
-    flex \
-    gawk \
-    git \
-    libncurses-dev \
-    libssl-dev \
-    python3 \
-    python3-dev \
-    rsync \
-    unzip \
-    wget \
-    whiptail
+
+if command -v apt-get &>/dev/null; then
+    sudo apt-get update -qq
+    sudo apt-get install -y \
+        bc \
+        bison \
+        build-essential \
+        cpio \
+        dosfstools \
+        file \
+        flex \
+        gawk \
+        git \
+        libncurses-dev \
+        libssl-dev \
+        mtools \
+        python3 \
+        python3-dev \
+        rsync \
+        unzip \
+        wget \
+        whiptail
+elif command -v pacman &>/dev/null; then
+    # Arch Linux / SteamOS
+    # Requires: sudo steamos-readonly disable  (SteamOS only, before running this script)
+    sudo pacman -Sy --noconfirm --needed \
+        bc \
+        bison \
+        base-devel \
+        cpio \
+        dosfstools \
+        file \
+        flex \
+        gawk \
+        git \
+        ncurses \
+        openssl \
+        mtools \
+        python \
+        rsync \
+        unzip \
+        wget \
+        libnewt
+else
+    echo "[WARNING] No supported package manager found (apt-get or pacman)."
+    echo "          Install manually: bc bison build-essential cpio dosfstools"
+    echo "                           file flex gawk git libncurses-dev libssl-dev"
+    echo "                           mtools python3 rsync unzip wget whiptail"
+fi
 
 # -----------------------------------------------------------------------------
 # 4. Initialize Batocera submodule
@@ -101,17 +134,54 @@ else
     echo "[INFO] Config symlink already exists — skipping."
 fi
 
+# -----------------------------------------------------------------------------
+# 6. Create output directories and seed local.mk
+#    Matches what CI does before invoking make.
+# -----------------------------------------------------------------------------
+echo "[INFO] Preparing output directories..."
+
+OUTPUT_DIR="${REPO_ROOT}/batocera/output/a733-cubie-a7s"
+BR_OUTPUT_DIR="${REPO_ROOT}/batocera/buildroot/batocera/output/a733-cubie-a7s/a733-cubie-a7s"
+LOCAL_MK_SRC="${REPO_ROOT}/board/batocera/allwinner/a733/local.mk"
+
+mkdir -p "${OUTPUT_DIR}"
+mkdir -p "${BR_OUTPUT_DIR}"
+
+if [ -f "${LOCAL_MK_SRC}" ]; then
+    cp "${LOCAL_MK_SRC}" "${OUTPUT_DIR}/local.mk"
+    cp "${LOCAL_MK_SRC}" "${BR_OUTPUT_DIR}/local.mk"
+    echo "[INFO] local.mk seeded to both output dirs."
+fi
+
+# -----------------------------------------------------------------------------
+# 7. Pre-seed download cache for packages not on standard mirrors
+#    ecwolf source is hosted externally — fetch it now so the build doesn't
+#    stall waiting for a non-standard URL.
+# -----------------------------------------------------------------------------
+echo "[INFO] Pre-seeding download cache..."
+mkdir -p "${REPO_ROOT}/batocera/dl"
+
+LIBTOOL_URL="https://ftp.gnu.org/pub/gnu/libtool/libtool-2.4.7.tar.xz"
+LIBTOOL_DEST="${REPO_ROOT}/batocera/dl/libtool-2.4.7.tar.xz"
+if [ ! -f "${LIBTOOL_DEST}" ]; then
+    echo "[INFO] Downloading libtool-2.4.7..."
+    wget -q -O "${LIBTOOL_DEST}" "${LIBTOOL_URL}" || echo "[WARNING] libtool download failed — will retry during build."
+fi
+
+ECWOLF_URL="https://github.com/suckbluefrog/Batocera-Multilib/releases/download/7-4-2026/ecwolf-source.tar.gz"
+ECWOLF_TMP="/tmp/ecwolf-source.tar.gz"
+if ! ls "${REPO_ROOT}/batocera/dl/ecwolf"* &>/dev/null 2>&1; then
+    echo "[INFO] Downloading ecwolf source..."
+    wget -q -O "${ECWOLF_TMP}" "${ECWOLF_URL}" && \
+        tar xzf "${ECWOLF_TMP}" -C "${REPO_ROOT}/batocera/dl/" && \
+        rm -f "${ECWOLF_TMP}" || \
+        echo "[WARNING] ecwolf download failed — build will attempt it later."
+fi
+
 echo ""
 echo "=== Setup complete ==="
 echo ""
 echo "Next steps:"
-echo "  Option A — use the wrapper:"
-echo "    ./scripts/build.sh"
+echo "  ./scripts/build.sh"
 echo ""
-echo "  Option B — run directly from batocera/:"
-echo "    cd batocera"
-echo "    make a733-cubie-a7s-config DIRECT_BUILD=1   # configure Buildroot"
-echo "    make a733-cubie-a7s-build  DIRECT_BUILD=1   # full build"
-echo ""
-echo "Note: DIRECT_BUILD=1 runs natively in WSL2 without Docker."
 echo "First build will take several hours (cross-compiling everything from source)."

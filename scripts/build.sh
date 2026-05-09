@@ -42,7 +42,12 @@ unset CLEAN_PATH _PATH_ENTRIES _entry
 # from MAKEFLAGS before forwarding to the real make.  The shim calls the real
 # make by absolute path so it cannot recurse into itself.
 # -----------------------------------------------------------------------------
-REAL_MAKE="$(command -v make)"
+REAL_MAKE="$(command -v make || true)"
+if [ -z "${REAL_MAKE}" ]; then
+    echo "[ERROR] 'make' not found in PATH. Install build tools first:"
+    echo "        sudo pacman -Sy --noconfirm --needed base-devel"
+    exit 1
+fi
 SHIM_DIR="$(mktemp -d)"
 cat > "${SHIM_DIR}/make" << SHIM_EOF
 #!/bin/bash
