@@ -72,6 +72,18 @@ if [ -n "${FLATPAK_ID}" ]; then
     ln -sf /usr/bin/g++  "${SHIM_DIR}/x86_64-pc-linux-gnu-g++"
     ln -sf /usr/bin/gcc  "${SHIM_DIR}/x86_64-unknown-linux-gnu-gcc"
     ln -sf /usr/bin/g++  "${SHIM_DIR}/x86_64-unknown-linux-gnu-g++"
+
+    # /run/host/usr/bin/rsync depends on libpopt.so.0 which lives on the host at
+    # /run/host/usr/lib but is absent from the Flatpak runtime. Wrap rsync so it
+    # finds the library; other host tools (bc, mtools, cpio) have no missing deps.
+    if [ -f "/run/host/usr/bin/rsync" ]; then
+        cat > "${SHIM_DIR}/rsync" << 'RSYNC_EOF'
+#!/bin/bash
+LD_LIBRARY_PATH="/run/host/usr/lib:/run/host/usr/lib64${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}" \
+    exec /run/host/usr/bin/rsync "$@"
+RSYNC_EOF
+        chmod +x "${SHIM_DIR}/rsync"
+    fi
 fi
 
 export PATH="${SHIM_DIR}:${PATH}"
