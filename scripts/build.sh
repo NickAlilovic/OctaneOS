@@ -72,7 +72,10 @@ REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 # /run/host — prepend its bin dirs so those tools are visible to the build.
 # -----------------------------------------------------------------------------
 if [ -d "/run/host/usr/bin" ]; then
-    export PATH="/run/host/usr/bin:/run/host/usr/local/bin:${PATH}"
+    # Append host paths so Flatpak-provided tools (/usr/bin/gcc, etc.) take
+    # precedence. Flatpak GCC 15.x has working headers; host GCC on SteamOS
+    # does not. rsync/bc/mtools from the host are still found via this suffix.
+    export PATH="${PATH}:/run/host/usr/bin:/run/host/usr/local/bin"
 fi
 
 # -----------------------------------------------------------------------------
@@ -106,5 +109,16 @@ cd "${BATOCERA_DIR}"
 # %-build already depends on %-config in the Batocera Makefile, so no
 # explicit pre-config step is needed — it runs automatically.
 
+# When running inside Flatpak (e.g. VS Code on SteamOS), the GCC at
+# /usr/bin/gcc is the Flatpak runtime GCC (15.x) which has working C headers.
+# The SteamOS host GCC has no headers. Buildroot's Makefile uses HOSTCC :=
+# (not ?=), so it cannot be overridden by environment — it must be passed as
+# a make command-line variable, which GNU Make propagates to all sub-makes
+# via MAKEFLAGS.
+MAKE_EXTRA_ARGS=()
+if [ -n "${FLATPAK_ID}" ]; then
+    MAKE_EXTRA_ARGS+=(HOSTCC=/usr/bin/gcc HOSTCXX=/usr/bin/g++)
+fi
+
 echo "[INFO] Starting build..."
-make a733-cubie-a7s-build DIRECT_BUILD=1 "$@"
+make a733-cubie-a7s-build DIRECT_BUILD=1 "${MAKE_EXTRA_ARGS[@]}" "$@"
