@@ -13,8 +13,10 @@ HOST_CXXFLAGS += -std=gnu++11 -D_GL_ATTRIBUTE_NODISCARD=
 # fixing all affected packages (hiredis, etc.) globally.
 BR2_CMAKE = $(BR2_EXTERNAL)/../scripts/host-cmake-compat
 # host-heimdal uses crypt() which glibc 2.28+ moved to libxcrypt (-lcrypt).
-# The Flatpak GCC environment has libcrypt.so but won't link it automatically.
-HOST_HEIMDAL_CONF_ENV += LIBS="-lcrypt"
+# AC_CHECK_FUNCS(crypt) detects the function but does NOT add -lcrypt to LIBS,
+# so libkrb5.so ends up with an unresolved crypt symbol. Override LIBS on the
+# make command line to force the linker to include libcrypt.
+HOST_HEIMDAL_MAKE_OPTS += LIBS="-pthread -lpthread -lcrypt"
 
 # host-ruby 3.3.5 gc.c triggers -Wformat= errors on GCC 12+ due to PRIdSIZE
 # expanding incorrectly. Pass --disable-werror so the build doesn't abort.
