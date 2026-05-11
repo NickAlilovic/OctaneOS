@@ -4,7 +4,7 @@
 # (e.g. _GL_ATTRIBUTE_NODISCARD) that break under C23. Force C11/C++11 for
 # all host package compilations. local.mk is included after package/Makefile.in
 # sets HOST_CFLAGS ?= -O2, so += appends without losing the base flags.
-HOST_CFLAGS += -std=gnu11 -D_GL_ATTRIBUTE_NODISCARD=
+HOST_CFLAGS += -std=gnu11 -D_GL_ATTRIBUTE_NODISCARD= -Wno-incompatible-pointer-types
 HOST_CXXFLAGS += -std=gnu++11 -D_GL_ATTRIBUTE_NODISCARD=
 
 # CMake 4.0 dropped compatibility with cmake_minimum_required < 3.5.
