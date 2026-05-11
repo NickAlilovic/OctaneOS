@@ -1,0 +1,30 @@
+From: OctaneOS Build Fix <noreply@octaneos>
+Date: Sun, 11 May 2026 00:00:00 +0000
+Subject: [PATCH] CrashRecoveryContext: use initial-exec TLS for shared lib compat
+
+The three thread_local variables in CrashRecoveryContext.cpp are compiled
+with the default local-exec TLS model when built without -fPIC. When LLVM
+then links them into libLLVM.so, the linker rejects the local-exec
+R_X86_64_TPOFF32 relocation:
+
+  relocation R_X86_64_TPOFF32 can not be used when making a shared object;
+  local-exec is incompatible with -shared
+
+Switch all three to initial-exec, which accesses TLS via the GOT and is
+fully compatible with shared libraries that are not dlopen'd at runtime.
+---
+ lib/Support/CrashRecoveryContext.cpp | 6 +++---
+ 1 file changed, 3 insertions(+), 3 deletions(-)
+
+diff --git a/lib/Support/CrashRecoveryContext.cpp b/lib/Support/CrashRecoveryContext.cpp
+--- a/lib/Support/CrashRecoveryContext.cpp
++++ b/lib/Support/CrashRecoveryContext.cpp
+@@ -24,1 +24,1 @@
+-static LLVM_THREAD_LOCAL const CrashRecoveryContextImpl *CurrentContext;
++static LLVM_THREAD_LOCAL __attribute__((tls_model("initial-exec"))) const CrashRecoveryContextImpl *CurrentContext;
+@@ -91,1 +91,1 @@
+-static LLVM_THREAD_LOCAL const CrashRecoveryContext *IsRecoveringFromCrash;
++static LLVM_THREAD_LOCAL __attribute__((tls_model("initial-exec"))) const CrashRecoveryContext *IsRecoveringFromCrash;
+@@ -310,1 +310,1 @@
+-static LLVM_THREAD_LOCAL const void* sCurrentExceptionHandle;
++static LLVM_THREAD_LOCAL __attribute__((tls_model("initial-exec"))) const void* sCurrentExceptionHandle;
