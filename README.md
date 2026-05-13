@@ -95,6 +95,19 @@ OctaneOS manages three distinct play modes automatically — no configuration re
 
 ---
 
+## Download
+
+**[OctaneOS v0.1.0-alpha — Radxa Cubie A7S](https://github.com/GameOctane/OctaneOS/releases/tag/v0.1.0-alpha)**
+
+```
+gunzip OctaneOS-a733-cubie-a7s-43-20260513.img.gz
+dd if=OctaneOS-a733-cubie-a7s-43-20260513.img of=/dev/sdX bs=4M status=progress
+```
+
+Replace `/dev/sdX` with your SD card device. Verify with the included `.md5` or `.sha256` file before flashing.
+
+---
+
 ## Build Status
 
 [![CI](https://github.com/GameOctane/OctaneOS/actions/workflows/build-image.yml/badge.svg)](https://github.com/GameOctane/OctaneOS/actions/workflows/build-image.yml)
@@ -107,8 +120,9 @@ OctaneOS manages three distinct play modes automatically — no configuration re
 | GitHub Actions CI image build | ✅ Complete |
 | A733 kernel + Cubie A7S device tree | ✅ Complete |
 | aic8800 WiFi driver integrated into image build | ✅ Complete |
-| Boot blobs (boot0 + U-Boot) | 🚧 In Progress |
-| OctaneOS booting on Cubie A7S hardware | ⏳ Pending hardware |
+| Boot blobs (boot0 + U-Boot) staged into image | ✅ Complete |
+| First flashable image released | ✅ Complete |
+| OctaneOS booting on Cubie A7S hardware | 🚧 In Progress |
 | DPI screen bring-up via LCD0 | ⏳ Pending hardware |
 | EmulationStation launching | ⏳ Pending |
 | First ROM running | ⏳ Pending |
