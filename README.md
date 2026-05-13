@@ -110,7 +110,7 @@ Replace `/dev/sdX` with your SD card device. Verify with the included `.md5` or 
 
 ## Build Status
 
-[![CI](https://github.com/GameOctane/OctaneOS/actions/workflows/build-image.yml/badge.svg)](https://github.com/GameOctane/OctaneOS/actions/workflows/build-image.yml)
+[![Release](https://img.shields.io/github/v/release/GameOctane/OctaneOS?include_prereleases&label=latest)](https://github.com/GameOctane/OctaneOS/releases/latest)
 
 > 🚧 OctaneOS is in active early development. We are building in public from day one — including the failures. Follow along.
 
