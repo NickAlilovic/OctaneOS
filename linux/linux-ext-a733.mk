@@ -6,7 +6,7 @@ define LINUX_BATOCERA_FETCH_ALLWINNER_BSP
 	if [ ! -f $(@D)/bsp/Makefile ]; then \
 		rm -rf $(@D)/bsp; \
 		echo ">>> Fetching Radxa allwinner-bsp into kernel bsp/ directory..."; \
-		git clone --depth=1 -b cubie-aiot-v1.4.8 \
+		git clone --depth=1 -b cubie-aiot-v1.4.6 \
 			https://github.com/radxa/allwinner-bsp \
 			$(@D)/bsp; \
 	fi
