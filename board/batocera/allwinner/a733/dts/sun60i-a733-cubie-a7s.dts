@@ -1975,3 +1975,29 @@
 	sid-supply = <&reg_dldo1>;
 	voltage = <1800>;
 };
+
+&hdmi0 {
+	dcdc2-supply = <&reg_dcdc2>;
+	cldo2-supply = <&reg_cldo2>;
+	hdmi_power0 = "dcdc2";
+	hdmi_power1 = "cldo2";
+	hdmi_power_cnt = <2>;
+	hdmi_hdcp1x_enable = <1>;
+	hdmi_hdcp2x_enable = <1>;
+	hdmi_cec_enable = <1>;
+	hdmi_clock_source = <0>;
+	hdmi_resistor_select = <1>;
+	hdmi_ddc_index = <20>;
+	priority = <6>;
+	snps_phy = <
+		 25000 185625 0x0007 0x8160 0x8188
+		185625 185625 0x0007 0x8160 0x8198
+		185625 340000 0x0004 0x8040 0x8E85
+		340000 600000 0x0000 0x80c0 0x82F6>;
+	status = "okay";
+};
+
+&hdmi_codec {
+	extcon = <&hdmi0>;
+	status = "okay";
+};
