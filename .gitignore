@@ -53,3 +53,11 @@ dkms.conf
 
 # debug information files
 *.dwo
+
+# Local build logs and auth artifacts
+auth
+login
+build.log
+
+# Claude Code internal files
+.claude/

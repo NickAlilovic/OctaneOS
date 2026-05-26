@@ -942,14 +942,14 @@ are already present in the Orange Pi kernel tree.
 +
 +&sdc0 {
 +	bus-width = <4>;
-+	cd-gpios = <&pio PF 6 (GPIO_ACTIVE_HIGH | GPIO_PULL_DOWN)>;
++	broken-cd;
++	/*cd-gpios = <&pio PF 6 (GPIO_ACTIVE_HIGH | GPIO_PULL_DOWN)>;*/
 +	/*non-removable;*/
-+	/*broken-cd;*/
 +	/*cd-inverted*/
 +	/*data3-detect;*/
 +	/*card-pwr-gpios = <&pio PH 14 1 1 2 0xffffffff>;*/
-+	cd-used-24M;
-+	cd-set-debounce = <0x1>;
++	/*cd-used-24M;*/
++	/*cd-set-debounce = <0x1>;*/
 +	cap-sd-highspeed;
 +	sd-uhs-sdr50;
 +	sd-uhs-ddr50;
@@ -2009,3 +2009,12 @@ are already present in the Orange Pi kernel tree.
 +	status = "okay";
 +};
 
+--- a/arch/arm64/boot/dts/allwinner/Makefile
++++ b/arch/arm64/boot/dts/allwinner/Makefile
+@@ -40,6 +40,7 @@
+ dtb-$(CONFIG_ARCH_SUNXI) += sun55i-t527-orangepi-4a.dtb
+ dtb-$(CONFIG_ARCH_SUNXI) += sun60i-t736-ai-pc-lite-b.dtb
+ dtb-$(CONFIG_ARCH_SUNXI) += sun60i-t736-ai-pc-lite-c.dtb
++dtb-$(CONFIG_ARCH_SUNXI) += sun60i-a733-cubie-a7s.dtb
+ dtb-$(CONFIG_ARCH_SUNXI) += sun60i-a733-orangepi-4-pro.dtb
+ dtb-$(CONFIG_ARCH_SUNXI) += sun60i-a733-orangepi-zero3w.dtb
