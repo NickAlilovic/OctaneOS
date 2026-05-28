@@ -1724,7 +1724,8 @@ are already present in the Orange Pi kernel tree.
 +		compatible = "hynetek,husb311";
 +		reg = <0x4e>;
 +		interrupt-parent = <&r_pio>;
-+		husb311,intr_gpio = <&r_pio PL 3 IRQ_TYPE_LEVEL_LOW>;
++		interrupts = <PL 3 IRQ_TYPE_LEVEL_LOW>;
++		husb311,intr_gpio = <&r_pio PL 3 GPIO_ACTIVE_LOW>;
 +		vbus-supply = <&reg_usb0_vbus>;
 +		/* aw,vbus-wakeup-quirk; */
 +		/* aw,port-reset-quirk; */
