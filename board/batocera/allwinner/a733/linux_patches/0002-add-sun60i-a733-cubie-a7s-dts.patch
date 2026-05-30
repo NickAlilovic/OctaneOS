@@ -4,7 +4,7 @@ are already present in the Orange Pi kernel tree.
 
 --- /dev/null
 +++ b/arch/arm64/boot/dts/allwinner/sun60i-a733-cubie-a7s.dts
-@@ -0,0 +1,2050 @@
+@@ -0,0 +1,2052 @@
 +// SPDX-License-Identifier: (GPL-2.0+ or MIT)
 +
 +/dts-v1/;
