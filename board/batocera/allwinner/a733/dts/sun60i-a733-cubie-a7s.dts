@@ -106,8 +106,8 @@
 		compatible = "allwinner,sunxi-phy-switcher";
 		reg = <0x0 0x10 0x0 0x0>;
 		// hotplug = <&pio PH 4 GPIO_ACTIVE_HIGH>;
-		// aux_p = <&r_pio PL 10 GPIO_ACTIVE_HIGH>;
-		// aux_n = <&r_pio PL 11 GPIO_ACTIVE_HIGH>;
+		aux_p = <&r_pio PL 10 GPIO_ACTIVE_HIGH>;
+		aux_n = <&r_pio PL 11 GPIO_ACTIVE_HIGH>;
 		phys = <&combo0_dp>, <&combo0_usb>;
 		phy-names = "dp-phy", "usb-phy";
 		dp_configure_delay = <20>;
