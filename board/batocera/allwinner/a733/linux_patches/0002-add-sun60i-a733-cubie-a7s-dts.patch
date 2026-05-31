@@ -4,7 +4,7 @@ are already present in the Orange Pi kernel tree.
 
 --- /dev/null
 +++ b/arch/arm64/boot/dts/allwinner/sun60i-a733-cubie-a7s.dts
-@@ -0,0 +1,2052 @@
+@@ -0,0 +1,2055 @@
 +// SPDX-License-Identifier: (GPL-2.0+ or MIT)
 +
 +/dts-v1/;
@@ -1906,7 +1906,7 @@ are already present in the Orange Pi kernel tree.
 +};
 +
 +&cpu0 {
-+	cpu-supply = <&reg_dcdc5>;
++	/* cpu-supply intentionally omitted — cpufreq-dt frequency-only mode */
 +};
 +
 +&dsufreq {
@@ -1914,7 +1914,7 @@ are already present in the Orange Pi kernel tree.
 +};
 +
 +&cpu6 {
-+	cpu-supply = <&reg_dcdc3>;
++	/* cpu-supply intentionally omitted — cpufreq-dt frequency-only mode */
 +};
 +
 +&npu {
