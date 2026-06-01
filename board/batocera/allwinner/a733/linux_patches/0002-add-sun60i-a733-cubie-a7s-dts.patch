@@ -4,7 +4,7 @@ are already present in the Orange Pi kernel tree.
 
 --- /dev/null
 +++ b/arch/arm64/boot/dts/allwinner/sun60i-a733-cubie-a7s.dts
-@@ -0,0 +1,2055 @@
+@@ -0,0 +1,2045 @@
 +// SPDX-License-Identifier: (GPL-2.0+ or MIT)
 +
 +/dts-v1/;
@@ -869,26 +869,19 @@ are already present in the Orange Pi kernel tree.
 +		compatible = "operating-points-v2";
 +		opp-shared;
 +
-+		opp-408000000  { opp-hz = /bits/ 64 <408000000>;  clock-latency-ns = <244144>; };
-+		opp-720000000  { opp-hz = /bits/ 64 <720000000>;  clock-latency-ns = <244144>; };
++		/* Frequencies proven safe at boot PMIC voltage (~900 mV).
++		 * Higher entries (1416+ MHz) need voltage scaling — not yet
++		 * implemented.  Minimum set to 1008 MHz to match U-Boot speed. */
 +		opp-1008000000 { opp-hz = /bits/ 64 <1008000000>; clock-latency-ns = <244144>; };
 +		opp-1200000000 { opp-hz = /bits/ 64 <1200000000>; clock-latency-ns = <244144>; };
-+		opp-1416000000 { opp-hz = /bits/ 64 <1416000000>; clock-latency-ns = <244144>; };
-+		opp-1608000000 { opp-hz = /bits/ 64 <1608000000>; clock-latency-ns = <244144>; };
-+		opp-1800000000 { opp-hz = /bits/ 64 <1800000000>; clock-latency-ns = <244144>; };
 +	};
 +
 +	a733_cluster1_opp: cluster1-opp-table-a733 {
 +		compatible = "operating-points-v2";
 +		opp-shared;
 +
-+		opp-408000000  { opp-hz = /bits/ 64 <408000000>;  clock-latency-ns = <244144>; };
-+		opp-720000000  { opp-hz = /bits/ 64 <720000000>;  clock-latency-ns = <244144>; };
 +		opp-1008000000 { opp-hz = /bits/ 64 <1008000000>; clock-latency-ns = <244144>; };
 +		opp-1200000000 { opp-hz = /bits/ 64 <1200000000>; clock-latency-ns = <244144>; };
-+		opp-1512000000 { opp-hz = /bits/ 64 <1512000000>; clock-latency-ns = <244144>; };
-+		opp-1800000000 { opp-hz = /bits/ 64 <1800000000>; clock-latency-ns = <244144>; };
-+		opp-1992000000 { opp-hz = /bits/ 64 <1992000000>; clock-latency-ns = <244144>; };
 +	};
 +};
 +
