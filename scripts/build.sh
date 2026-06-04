@@ -146,4 +146,17 @@ if [ -n "${FLATPAK_ID}" ]; then
 fi
 
 echo "[INFO] Starting build..."
+
+# --nohup: detach from the terminal so VS Code / Claude crashes don't kill the build.
+# Output goes to build.log in the repo root; tail -f build.log to follow it.
+if [[ "${1:-}" == "--nohup" ]]; then
+    shift
+    LOG="${REPO_ROOT}/build.log"
+    echo "[INFO] Running detached via nohup — follow with: tail -f ${LOG}"
+    nohup make a733-cubie-a7s-build DIRECT_BUILD=1 "${MAKE_EXTRA_ARGS[@]}" "$@" \
+        > "${LOG}" 2>&1 &
+    echo "[INFO] Build PID: $!"
+    exit 0
+fi
+
 make a733-cubie-a7s-build DIRECT_BUILD=1 "${MAKE_EXTRA_ARGS[@]}" "$@"
