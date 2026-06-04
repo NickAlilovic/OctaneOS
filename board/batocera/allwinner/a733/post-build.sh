@@ -50,9 +50,14 @@ echo "[post-build]   GPU source   : ${GPU_MODULE_DIR}"
 # That in turn calls make -Rr -C KERNELDIR M=kbuild, which uses -Rr flags
 # that suppress command-line variable propagation. Export CROSS_COMPILE and
 # KERNELDIR as env vars so they survive the -Rr make invocation.
+# sunxi_linux/Makefile sets KERNEL_CC=$(LICHEE_TOOLCHAIN_PATH)/bin/$(LICHEE_CROSS_COMPILER)-gcc.
+# With both Lichee vars empty (outside Allwinner SDK) this becomes /bin/-gcc.
+# Set them so the toolchain prefix resolves correctly.
 export CROSS_COMPILE="${CROSS}"
 export KERNELDIR="${KERNEL_BUILD}"
 export ARCH=arm64
+export LICHEE_TOOLCHAIN_PATH="${HOST_DIR}"
+export LICHEE_CROSS_COMPILER="aarch64-buildroot-linux-gnu"
 make -C "${GPU_MODULE_DIR}" build \
     KERNEL_SRC_DIR="${KERNEL_BUILD}" \
     KERNEL_OUT_DIR="${KERNEL_BUILD}" \
@@ -60,6 +65,8 @@ make -C "${GPU_MODULE_DIR}" build \
     KDIR="${KERNEL_BUILD}" \
     ARCH=arm64 \
     CROSS_COMPILE="${CROSS}" \
+    LICHEE_TOOLCHAIN_PATH="${HOST_DIR}" \
+    LICHEE_CROSS_COMPILER="aarch64-buildroot-linux-gnu" \
     CPU_ARCH=arm64 \
     GPU_TYPE=bxm \
     CONFIG_OS_TYPE=linux \
