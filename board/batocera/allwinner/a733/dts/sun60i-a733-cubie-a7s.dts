@@ -987,13 +987,11 @@
 	cd-used-24M;
 	cd-set-debounce = <0x1>;
 	cap-sd-highspeed;
-	sd-uhs-sdr50;
-	sd-uhs-ddr50;
-	sd-uhs-sdr104;
+	no-1-8-v;
 	no-sdio;
 	no-mmc;
 	sunxi-power-save-mode;
-	/*sunxi-dis-signal-vol-sw;*/
+	sunxi-dis-signal-vol-sw;
 	max-frequency = <200000000>;
 	ctl-spec-caps = <0x428>;
 	vmmc-supply = <&reg_dc1sw2>;
