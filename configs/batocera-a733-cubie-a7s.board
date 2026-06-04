@@ -21,6 +21,7 @@ BR2_TARGET_GENERIC_GETTY_BAUDRATE_115200=y
 # Base Batocera patches + OctaneOS A733-specific patches
 BR2_GLOBAL_PATCH_DIR="$(BR2_EXTERNAL_BATOCERA_PATH)/board/batocera/patches $(BR2_EXTERNAL_BATOCERA_PATH)/board/batocera/allwinner/patches $(BR2_EXTERNAL_BATOCERA_PATH)/board/batocera/allwinner/a733/patches"
 BR2_ROOTFS_OVERLAY="$(BR2_EXTERNAL_BATOCERA_PATH)/board/batocera/fsoverlay $(BR2_EXTERNAL_BATOCERA_PATH)/board/batocera/allwinner/a733/fsoverlay"
+BR2_ROOTFS_POST_BUILD_SCRIPT="$(BR2_EXTERNAL_BATOCERA_PATH)/board/batocera/allwinner/a733/post-build.sh"
 BR2_TARGET_ROOTFS_SQUASHFS4_ZSTD=y
 
 # Linux headers — must match kernel series
@@ -85,8 +86,8 @@ BR2_LINUX_KERNEL_INTREE_DTS_NAME="allwinner/sun60i-a733-cubie-a7s"
 # module) so it cannot be built in-tree via bsp/Makefile obj-y.
 # Userspace blobs (libGLESv2, libVK_IMG, etc.) are proprietary and must be
 # obtained separately from Radxa's allwinner-target repo.
-BR2_PACKAGE_PVRSRVKM=y
-
+# pvrsrvkm.ko is built by post-build.sh (not a Buildroot package — OctaneOS
+# is not a registered BR2_EXTERNAL so Kconfig/packages can't be injected).
 # Mesa softpipe is kept as GL fallback for packages that need a Mesa EGL/GLES
 # provider at link time (the pvrsrvkm path bypasses Mesa at runtime).
 # =============================================================================
