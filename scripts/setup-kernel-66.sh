@@ -132,6 +132,14 @@ ROGUE_COMPILERS="${KERNEL_DIR}/bsp/modules/gpu/img-bxm/linux/rogue_km/build/linu
 ln -sf aarch64-linux-gnu.mk "${ROGUE_COMPILERS}/aarch64-buildroot-linux-gnu.mk"
 echo "  Added aarch64-buildroot-linux-gnu.mk compiler config for rogue_km"
 
+# rogue_km's kbuild/Makefile.template uses .SECONDARY to prevent deletion of
+# intermediate build artifacts. Linux kernel 6.6 Kbuild uses .NOTINTERMEDIATE
+# for the same purpose. GNU Make 4.4+ treats them as mutually exclusive.
+# Replace .SECONDARY with .NOTINTERMEDIATE so the kbuild step succeeds.
+ROGUE_TEMPLATE="${KERNEL_DIR}/bsp/modules/gpu/img-bxm/linux/rogue_km/build/linux/kbuild/Makefile.template"
+sed -i 's/^\.SECONDARY:$/.NOTINTERMEDIATE:/' "${ROGUE_TEMPLATE}"
+echo "  Replaced .SECONDARY with .NOTINTERMEDIATE in rogue_km Makefile.template"
+
 # BSP USB host Makefile uses -I$(srctree)/drivers/usb/host so that
 # #include <../sunxi_usb/include/...> resolves from drivers/usb/.
 # Symlink the BSP sunxi_usb dir into mainline so the path resolves.

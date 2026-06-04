@@ -47,7 +47,12 @@ echo "[post-build]   GPU source   : ${GPU_MODULE_DIR}"
 # Call its 'build' target directly with GPU_TYPE=bxm.
 # The build target internally does:
 #   $(MAKE) -C img-bxm/linux/rogue_km/build/linux/sunxi_linux BUILD=release
-# Output: img-bxm/linux/rogue_km/binary_sunxi_linux_nulldrmws_release/target_aarch64/kbuild/pvrsrvkm.ko
+# That in turn calls make -Rr -C KERNELDIR M=kbuild, which uses -Rr flags
+# that suppress command-line variable propagation. Export CROSS_COMPILE and
+# KERNELDIR as env vars so they survive the -Rr make invocation.
+export CROSS_COMPILE="${CROSS}"
+export KERNELDIR="${KERNEL_BUILD}"
+export ARCH=arm64
 make -C "${GPU_MODULE_DIR}" build \
     KERNEL_SRC_DIR="${KERNEL_BUILD}" \
     KERNEL_OUT_DIR="${KERNEL_BUILD}" \
