@@ -114,7 +114,15 @@ echo "  Fixed ${COUNT} Kconfig files (BSP_TOP → bsp/)"
 # live in bsp/configs/linux-6.6/ and must be available in arch/arm64/boot/
 # dts/allwinner/ before the board DTS can be compiled.
 # -----------------------------------------------------------------------------
-echo "[kernel-66] Step 5: copy A733 DTSI files"
+echo "[kernel-66] Step 5: create BSP bridge symlinks in mainline driver tree"
+# BSP USB host Makefile uses -I$(srctree)/drivers/usb/host so that
+# #include <../sunxi_usb/include/...> resolves from drivers/usb/.
+# Symlink the BSP sunxi_usb dir into mainline so the path resolves.
+ln -sfn "${KERNEL_DIR}/bsp/drivers/usb/sunxi_usb" \
+        "${KERNEL_DIR}/drivers/usb/sunxi_usb"
+echo "  Linked drivers/usb/sunxi_usb → bsp/drivers/usb/sunxi_usb"
+
+echo "[kernel-66] Step 6: copy A733 DTSI files"
 ALLWINNER_DTS="${KERNEL_DIR}/arch/arm64/boot/dts/allwinner"
 BSP_DTS_SRC="${KERNEL_DIR}/bsp/configs/linux-6.6"
 
@@ -135,7 +143,7 @@ done
 # Copy them into include/dt-bindings/, skipping any file already present
 # (mainline headers take precedence).
 # -----------------------------------------------------------------------------
-echo "[kernel-66] Step 6: install dt-bindings headers"
+echo "[kernel-66] Step 7: install dt-bindings headers"
 BSP_INCLUDE="${KERNEL_DIR}/bsp/include"
 if [ -d "${BSP_INCLUDE}/dt-bindings" ]; then
     # cp -rn skips existing files (--no-clobber)
@@ -154,7 +162,7 @@ fi
 # This avoids a 2000-line patch file and keeps the DTS source of truth in one
 # place (board/batocera/allwinner/a733/dts/).
 # -----------------------------------------------------------------------------
-echo "[kernel-66] Step 7: install A7S board DTS"
+echo "[kernel-66] Step 8: install A7S board DTS"
 BOARD_DTS_SRC="${REPO_ROOT}/board/batocera/allwinner/a733/dts/sun60i-a733-cubie-a7s.dts"
 BOARD_DTS_DST="${ALLWINNER_DTS}/sun60i-a733-cubie-a7s.dts"
 
@@ -182,7 +190,7 @@ fi
 # Currently: cpufreq sun50i A733 match (adds one line to match list).
 # The BSP may already include this — if so, the patch fails harmlessly.
 # -----------------------------------------------------------------------------
-echo "[kernel-66] Step 8: apply OctaneOS patches"
+echo "[kernel-66] Step 9: apply OctaneOS patches"
 if [ -d "${PATCHES_DIR}" ]; then
     for patch in $(find "${PATCHES_DIR}" -name '*.patch' | sort); do
         pname="$(basename "${patch}")"
@@ -205,7 +213,7 @@ fi
 # Radxa generic defconfig) plus linux-defconfig-fragment.config (AW_* overrides).
 # This stub is only needed if building without Buildroot's custom config path.
 # -----------------------------------------------------------------------------
-echo "[kernel-66] Step 9: write arch/arm64/configs/bsp_defconfig"
+echo "[kernel-66] Step 10: write arch/arm64/configs/bsp_defconfig"
 BSPDEF="${KERNEL_DIR}/arch/arm64/configs/bsp_defconfig"
 if [ ! -f "${BSPDEF}" ]; then
     # Minimal platform selection — Buildroot uses USE_CUSTOM_CONFIG anyway
