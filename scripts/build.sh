@@ -76,12 +76,16 @@ if [ -n "${FLATPAK_ID}" ]; then
     # /run/host/usr/bin/rsync segfaults in the Flatpak due to glibc/ABI mismatch
     # even with LD_LIBRARY_PATH pointing to host libs. Use flatpak-spawn --host
     # to run rsync on the host side where its library environment is intact.
+    # Write to $HOME/bin (persistent) rather than SHIM_DIR (deleted on EXIT).
+    # This is critical for --nohup builds: the script exits (removing SHIM_DIR)
+    # while the background make is still running and needs rsync.
     if [ -x "/usr/bin/flatpak-spawn" ] && [ -f "/run/host/usr/bin/rsync" ]; then
-        cat > "${SHIM_DIR}/rsync" << 'RSYNC_EOF'
+        mkdir -p "$HOME/bin"
+        cat > "$HOME/bin/rsync" << 'RSYNC_EOF'
 #!/bin/bash
 exec /usr/bin/flatpak-spawn --host rsync "$@"
 RSYNC_EOF
-        chmod +x "${SHIM_DIR}/rsync"
+        chmod +x "$HOME/bin/rsync"
     fi
 fi
 
