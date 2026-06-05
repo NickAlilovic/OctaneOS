@@ -1091,6 +1091,7 @@
 
 &usbc2 {
 	device_type = "usbc2";
+	drvvbus-supply = <&reg_usb0_vbus>;
 	status = "okay";
 };
 
