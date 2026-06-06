@@ -49,7 +49,12 @@ if [ -z "${REAL_MAKE}" ]; then
     exit 1
 fi
 SHIM_DIR="$(mktemp -d)"
-cat > "${SHIM_DIR}/make" << SHIM_EOF
+# Also write to $HOME/bin/make (persistent) for --nohup builds.
+# The script exits (deleting SHIM_DIR via trap EXIT) while the background make
+# is still running and needs this shim. Without $HOME/bin/make, sub-makes
+# launched by the background make can't find the shim and fail immediately.
+mkdir -p "$HOME/bin"
+cat > "$HOME/bin/make" << SHIM_EOF
 #!/bin/bash
 # Strip --no-builtin-rules / -r from inherited MAKEFLAGS.
 # GNU Make stores the flag as 'r'; strip it from the leading flags word.
@@ -59,7 +64,8 @@ _mf="\$(echo "\$_mf" | sed 's/^\\(-*\\)\\([A-QS-Za-qs-z]*\\)r\\([A-Za-z]*\\)/\\1
 export MAKEFLAGS="\$_mf"
 exec ${REAL_MAKE} "\$@"
 SHIM_EOF
-chmod +x "${SHIM_DIR}/make"
+chmod +x "$HOME/bin/make"
+cp "$HOME/bin/make" "${SHIM_DIR}/make"
 
 # When running inside Flatpak, /run/host/usr/bin/x86_64-pc-linux-gnu-gcc is the
 # SteamOS host GCC 14.2.1. Its cc1 depends on libisl.so.23 which is absent from
