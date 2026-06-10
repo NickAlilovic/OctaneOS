@@ -1,0 +1,56 @@
+From: Jason Germino <jasongermino@gmail.com>
+Date: Sat, 07 Jun 2026 00:00:00 +0000
+Subject: [PATCH] usb: typec: tcpm: skip PS_SOURCE_ON timer in SRC_ATTACHED
+ when Vbus already present
+
+When a self-powered UFP (e.g. a DP display/monitor sourcing 5V on Vbus)
+is connected, VBUS_PRES in the TCPC's POWER_STATUS register is already
+asserted when SRC_ATTACHED is entered.
+
+SRC_ATTACHED calls tcpm_src_attach() to enable the DFP's own Vbus
+regulator, then unconditionally queues a PD_T_PS_SOURCE_ON (480 ms)
+timer pointing back to SRC_UNATTACHED.  The intent is that
+_tcpm_pd_vbus_on() — triggered by a POWER_STATUS interrupt on the
+VBUS_PRES 0→1 edge — will cancel that timer and advance to SRC_STARTUP.
+
+But when the UFP's Vbus is already present at 5V, VBUS_PRES never
+transitions from 0 to 1, so the TCPC never fires the interrupt, and
+_tcpm_pd_vbus_on() is never called.  The 480 ms timer always expires,
+returning to SRC_UNATTACHED, and the port loops forever:
+
+  SRC_ATTACHED → (480 ms) → SRC_UNATTACHED → TOGGLING →
+  SRC_ATTACH_WAIT → SRC_ATTACHED → ...
+
+Fix: after tcpm_src_attach() succeeds, check port->vbus_present.  If
+already true, skip the timer and advance directly to SRC_STARTUP,
+matching exactly what _tcpm_pd_vbus_on() would have done.
+
+Signed-off-by: Jason Germino <jasongermino@gmail.com>
+---
+ drivers/usb/typec/tcpm/tcpm.c | 15 +++++++++++++--
+ 1 file changed, 13 insertions(+), 2 deletions(-)
+
+diff --git a/drivers/usb/typec/tcpm/tcpm.c b/drivers/usb/typec/tcpm/tcpm.c
+--- a/drivers/usb/typec/tcpm/tcpm.c
++++ b/drivers/usb/typec/tcpm/tcpm.c
+@@ -4036,8 +4036,19 @@ static void run_state_machine(struct tcpm_port *port)
+ 	case SRC_ATTACHED:
+ 		ret = tcpm_src_attach(port);
+-		tcpm_set_state(port, SRC_UNATTACHED,
+-			       ret < 0 ? 0 : PD_T_PS_SOURCE_ON);
++		if (ret < 0) {
++			tcpm_set_state(port, SRC_UNATTACHED, 0);
++		} else if (port->vbus_present) {
++			/*
++			 * Vbus was already present when we entered SRC_ATTACHED,
++			 * sourced by the self-powered UFP (e.g. a DP display).
++			 * VBUS_PRES in POWER_STATUS never transitions 0→1, so
++			 * _tcpm_pd_vbus_on() (which would normally cancel the
++			 * PD_T_PS_SOURCE_ON timer and advance to SRC_STARTUP)
++			 * is never called.  Advance directly.
++			 */
++			tcpm_set_state(port, SRC_STARTUP, 0);
++		} else {
++			tcpm_set_state(port, SRC_UNATTACHED, PD_T_PS_SOURCE_ON);
++		}
+ 		break;

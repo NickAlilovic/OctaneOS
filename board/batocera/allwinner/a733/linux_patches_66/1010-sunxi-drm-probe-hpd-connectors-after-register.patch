@@ -1,0 +1,69 @@
+From: Jason Germino <jasongermino@gmail.com>
+Date: Mon, 09 Jun 2026 00:00:00 +0000
+Subject: [PATCH] drm: sunxi: probe HPD connectors after drm_dev_register
+
+The KMS poll thread explicitly skips connectors flagged as
+DRM_CONNECTOR_POLL_HPD; it never calls detect() or fill_modes() on
+them.  Hotplug events fired inside component_bind_all() are silently
+dropped because drm_dev_register() has not yet been called and the
+sysfs kobject does not exist yet.
+
+As a result, connector->modes stays empty for any HPD connector that
+is already connected when the DRM driver loads (e.g. a USB-C
+DisplayPort monitor that is plugged in at boot).
+
+Non-master DRM clients — batocera-drminfo in particular — call
+drmModeGetConnector() without holding DRM master rights, so the
+kernel does not invoke fill_modes() for them.  The connector appears
+to have zero modes, listOutputs returns nothing for it, and the
+display setup script never configures an output.
+
+Fix: after a successful drm_dev_register() iterate all HPD connectors
+and call drm_helper_probe_single_connector_modes() under the
+mode_config mutex.  This seeds the mode list from the display's EDID
+(via the AUX channel for DP) so that any subsequent non-master probe
+sees a fully-populated connector.  Then fire drm_kms_helper_hotplug_event()
+to notify userspace of the now-connected display.
+
+Signed-off-by: Jason Germino <jasongermino@gmail.com>
+---
+ bsp/drivers/drm/sunxi_drm_drv.c | 27 +++++++++++++++++++++++++++
+ 1 file changed, 27 insertions(+)
+
+diff --git a/bsp/drivers/drm/sunxi_drm_drv.c b/bsp/drivers/drm/sunxi_drm_drv.c
+--- a/bsp/drivers/drm/sunxi_drm_drv.c
++++ b/bsp/drivers/drm/sunxi_drm_drv.c
+@@ -1278,6 +1278,33 @@ static int sunxi_drm_bind(struct device *dev)
+
+ dev_register:
+ 	ret = drm_dev_register(drm, 0);
++	if (!ret) {
++		struct drm_connector *connector;
++		struct drm_connector_list_iter conn_iter;
++
++		/* Probe HPD connectors that are already connected at bind time
++		 * (e.g. a USB-C DP display).  The KMS poll thread skips HPD
++		 * connectors entirely, so without this one-shot probe the
++		 * connector->modes list stays empty.  Non-master DRM clients
++		 * (like batocera-drminfo) cannot trigger fill_modes themselves,
++		 * so they will see no modes and will be unable to select this
++		 * display as output.  All hotplug events fired inside
++		 * component_bind_all() were silently dropped because the DRM
++		 * device was not yet registered; this probe + hotplug event is
++		 * the first one that reaches userspace. */
++		mutex_lock(&drm->mode_config.mutex);
++		drm_connector_list_iter_begin(drm, &conn_iter);
++		drm_for_each_connector_iter(connector, &conn_iter) {
++			if (connector->polled & DRM_CONNECTOR_POLL_HPD)
++				drm_helper_probe_single_connector_modes(
++					connector,
++					drm->mode_config.max_width,
++					drm->mode_config.max_height);
++		}
++		drm_connector_list_iter_end(&conn_iter);
++		mutex_unlock(&drm->mode_config.mutex);
++		drm_kms_helper_hotplug_event(drm);
++	}
+
+ #if IS_ENABLED(CONFIG_PROC_FS)
+ 	ret = sunxi_drm_procfs_init(drm);

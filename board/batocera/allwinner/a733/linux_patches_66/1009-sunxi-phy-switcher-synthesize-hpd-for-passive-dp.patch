@@ -1,0 +1,46 @@
+From: Jason Germino <jasongermino@gmail.com>
+Date: Sun, 08 Jun 2026 00:00:00 +0000
+Subject: [PATCH] phy: mux: sunxi-phy-switcher: synthesise HPD for no-data
+ DP mux calls
+
+When the mux is called with a DP state (TYPEC_DP_STATE_*) but
+state->data == NULL, it means TCPM triggered the switch directly
+(without the displayport.c altmode driver).  This happens for a
+passive USB-C→DisplayPort cable where the display has no PD
+controller: TCPM forces DP_STATE_E at SRC_READY, bypassing VDM
+negotiation.
+
+In this case hpd_status stays false (no altmode data to parse), so
+phy_mode has HPD bit = 0, and the combophy never fires its serdes
+extcon → edp0 never starts link training.
+
+Fix: when called with a DP mode and data == NULL, treat HPD as
+asserted.  The display is physically present (that is why we are in
+DP_STATE_E), so synthesising HPD is correct.
+
+With HPD = 1 in phy_mode, sunxi_cadence_combo0_dp_phy_set_mode() fires
+extcon_set_state_sync(serdes_extcon, EXTCON_DISP_DP, 1), which wakes
+the edp0 driver to start DisplayPort link training.
+
+Signed-off-by: Jason Germino <jasongermino@gmail.com>
+---
+ bsp/drivers/usb/typec/mux/sunxi-phy-switcher.c | 8 ++++++++
+ 1 file changed, 8 insertions(+)
+
+diff --git a/bsp/drivers/usb/typec/mux/sunxi-phy-switcher.c b/bsp/drivers/usb/typec/mux/sunxi-phy-switcher.c
+--- a/bsp/drivers/usb/typec/mux/sunxi-phy-switcher.c
++++ b/bsp/drivers/usb/typec/mux/sunxi-phy-switcher.c
+@@ -283,6 +283,14 @@ sunxi_phy_mux_set(struct typec_mux_dev *mux, struct typec_mux_state *state)
+ 		if ((data->conf & DP_CONF_SIGNALING_DP) && (data->status & DP_STATUS_HPD_STATE))
+ 			phy_switcher->hpd_status = true;
+ 		else
+ 			phy_switcher->hpd_status = false;
++	} else if (dp_mode) {
++		/*
++		 * Called from TCPM without altmode data — passive USB-C→DP
++		 * cable with no PD controller.  The display is physically
++		 * present; treat HPD as asserted so the combophy fires the
++		 * serdes extcon and edp0 starts link training.
++		 */
++		phy_switcher->hpd_status = true;
+ 	}

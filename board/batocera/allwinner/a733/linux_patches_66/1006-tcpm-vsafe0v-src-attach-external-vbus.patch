@@ -1,0 +1,46 @@
+From: Jason Germino <jasongermino@gmail.com>
+Date: Fri, 06 Jun 2026 00:00:00 +0000
+Subject: [PATCH] usb: typec: tcpm: allow SRC_ATTACH_WAIT when external Vbus
+ is present
+
+When a self-powered UFP (e.g. a DP display/monitor that also sources 5V
+on Vbus for charging) is connected at boot, the HUSB311 TCPC reports
+VBUS_PRES=1 during tcpm_init().  This causes port->vbus_present=true and
+port->vbus_vsafe0v=false.
+
+Since Vbus remains stable at 5V (no transition), no POWER_STATUS
+interrupt fires afterward, so vbus_vsafe0v is never recovered to true.
+The SRC_ATTACH_WAIT state requires vbus_vsafe0v before scheduling
+SRC_ATTACHED, so TCPM freezes indefinitely.
+
+Fix: when entering SRC_UNATTACHED and our own Vbus regulator is not
+active (vbus_source=false), mark vbus_vsafe0v=true.  External Vbus from
+the UFP does not conflict with our source attachment — we can still
+enable our own regulator to assert Vbus as source.  This matches the
+USB Type-C spec intent: the DFP only needs Vbus at vSafe0V relative to
+*its own* prior sourcing, not relative to external power.
+
+Signed-off-by: Jason Germino <jasongermino@gmail.com>
+---
+ drivers/usb/typec/tcpm/tcpm.c | 9 +++++++++
+ 1 file changed, 9 insertions(+)
+
+diff --git a/drivers/usb/typec/tcpm/tcpm.c b/drivers/usb/typec/tcpm/tcpm.c
+--- a/drivers/usb/typec/tcpm/tcpm.c
++++ b/drivers/usb/typec/tcpm/tcpm.c
+@@ -3944,6 +3944,15 @@ static void run_state_machine(struct tcpm_port *port)
+ 		if (!port->non_pd_role_swap)
+ 			tcpm_swap_complete(port, -ENOTCONN);
+ 		tcpm_src_detach(port);
++		/*
++		 * If our Vbus regulator is not active but the TCPC reports Vbus
++		 * present (e.g., a self-powered UFP such as a display/monitor is
++		 * sourcing Vbus), do not block source attachment.  External Vbus
++		 * does not prevent us from later enabling our own regulator, so
++		 * treat the current state as vSafe0V from our side.
++		 */
++		if (!port->vbus_source)
++			port->vbus_vsafe0v = true;
+ 		if (port->potential_contaminant) {
+ 			tcpm_set_state(port, CHECK_CONTAMINANT, 0);
+ 			break;

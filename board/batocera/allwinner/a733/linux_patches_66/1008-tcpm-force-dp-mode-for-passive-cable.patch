@@ -1,0 +1,63 @@
+From: Jason Germino <jasongermino@gmail.com>
+Date: Sun, 08 Jun 2026 00:00:00 +0000
+Subject: [PATCH] usb: typec: tcpm: force DP mux at SRC_READY for passive
+ USB-C→DP cable
+
+A passive USB-C→DisplayPort cable connects a self-powered DP display
+(which sources 5 V on Vbus) but has no USB PD controller.  Every
+Source_Capabilities transmission returns TCPC_TX_FAILED (no GoodCRC)
+so pd_capable stays false after nCapsCount retries.  Without a PD
+session there are no VDMs, so the displayport.c altmode driver never
+runs and the typec mux stays in TYPEC_STATE_USB forever.
+
+Detect this case at SRC_READY:
+  - pd_capable == false: no GoodCRC was ever received
+  - vbus_present == true: UFP is sourcing Vbus (self-powered display)
+
+An ordinary non-PD USB peripheral would not source Vbus back at the
+DFP, so the combination is a reliable fingerprint for a passive DP
+cable connected to a powered display.
+
+When detected, call tcpm_mux_set() with TYPEC_DP_STATE_E (4-lane DP,
+no USB SuperSpeed) directly, bypassing the VDM negotiation path that
+will never succeed.
+
+The sunxi-phy-switcher driver receives this call (data == NULL) and
+synthesises HPD=asserted — see the companion patch to that driver —
+which causes the combophy to fire its serdes extcon so edp0 starts
+DisplayPort link training.
+
+Signed-off-by: Jason Germino <jasongermino@gmail.com>
+---
+ drivers/usb/typec/tcpm/tcpm.c | 21 +++++++++++++++++++++
+ 1 file changed, 21 insertions(+)
+
+diff --git a/drivers/usb/typec/tcpm/tcpm.c b/drivers/usb/typec/tcpm/tcpm.c
+--- a/drivers/usb/typec/tcpm/tcpm.c
++++ b/drivers/usb/typec/tcpm/tcpm.c
+@@ -4197,6 +4197,27 @@ static void run_state_machine(struct tcpm_port *port)
+ 		 * possible when type-c is connected to Type-A/B
+ 		 */
+
++		/*
++		 * Passive USB-C→DisplayPort cable: pd_capable stays false
++		 * because the display has no PD controller (every
++		 * Source_Capabilities TX returns TCPC_TX_FAILED, no GoodCRC).
++		 * vbus_present is true because the self-powered display sources
++		 * 5 V on Vbus back through the cable.  This combination
++		 * reliably identifies the cable; an ordinary non-PD USB
++		 * peripheral would not source Vbus back at the DFP.  Switch
++		 * the mux to 4-lane DP (STATE_E) directly instead of waiting
++		 * for VDMs that will never come.
++		 */
++		if (!port->pd_capable && port->vbus_present) {
++			enum typec_orientation orientation;
++
++			if (port->polarity == TYPEC_POLARITY_CC1)
++				orientation = TYPEC_ORIENTATION_NORMAL;
++			else
++				orientation = TYPEC_ORIENTATION_REVERSE;
++			tcpm_mux_set(port, TYPEC_DP_STATE_E,
++				     USB_ROLE_HOST, orientation);
++		}
+ 		break;
