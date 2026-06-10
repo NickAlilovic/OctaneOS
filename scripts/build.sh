@@ -38,55 +38,45 @@ unset CLEAN_PATH _PATH_ENTRIES _entry
 # hand-written Makefiles (squashfs-tools, lz4, xxhash, zlib, ...) rely on
 # the implicit %.o: %.c rule and fail with "No rule to make target '*.o'".
 #
-# Fix: place a thin make shim at the front of PATH that strips the 'r' flag
-# from MAKEFLAGS before forwarding to the real make.  The shim calls the real
-# make by absolute path so it cannot recurse into itself.
+# Fix: write a thin make shim to $HOME/bin/make (persistent across exit) that
+# strips the 'r' flag from MAKEFLAGS before forwarding to the real make.  All
+# shims live in $HOME/bin — no temp dir is needed, so there is no race between
+# the foreground script's EXIT trap and the background --nohup make process.
 # -----------------------------------------------------------------------------
-REAL_MAKE="$(command -v make || true)"
+# Find the real system make, skipping $HOME/bin to avoid picking up a stale
+# shim written by a previous build run.
+REAL_MAKE="$(PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin command -v make || true)"
 if [ -z "${REAL_MAKE}" ]; then
     echo "[ERROR] 'make' not found in PATH. Install build tools first:"
     echo "        sudo pacman -Sy --noconfirm --needed base-devel"
     exit 1
 fi
-SHIM_DIR="$(mktemp -d)"
-# Also write to $HOME/bin/make (persistent) for --nohup builds.
-# The script exits (deleting SHIM_DIR via trap EXIT) while the background make
-# is still running and needs this shim. Without $HOME/bin/make, sub-makes
-# launched by the background make can't find the shim and fail immediately.
 mkdir -p "$HOME/bin"
 cat > "$HOME/bin/make" << SHIM_EOF
 #!/bin/bash
 # Strip --no-builtin-rules / -r from inherited MAKEFLAGS.
-# GNU Make stores the flag as 'r'; strip it from the leading flags word.
+# GNU Make stores the flag as 'r'; strip it from the leading flags cluster.
 _mf="\${MAKEFLAGS}"
-# Remove standalone -r or r at the start of the flags cluster
 _mf="\$(echo "\$_mf" | sed 's/^\\(-*\\)\\([A-QS-Za-qs-z]*\\)r\\([A-Za-z]*\\)/\\1\\2\\3/')"
 export MAKEFLAGS="\$_mf"
 exec ${REAL_MAKE} "\$@"
 SHIM_EOF
 chmod +x "$HOME/bin/make"
-cp "$HOME/bin/make" "${SHIM_DIR}/make"
 
 # When running inside Flatpak, /run/host/usr/bin/x86_64-pc-linux-gnu-gcc is the
 # SteamOS host GCC 14.2.1. Its cc1 depends on libisl.so.23 which is absent from
 # the Flatpak runtime, causing autoconf C89/C99 conformance probes to fail with
 # "error while loading shared libraries: libisl.so.23". Mask the broken triplet-
-# prefixed compilers with symlinks to the working Flatpak GCC in the shim dir,
-# which sits at the front of PATH.
+# prefixed compilers with symlinks to the working Flatpak GCC in $HOME/bin.
 if [ -n "${FLATPAK_ID}" ]; then
-    ln -sf /usr/bin/gcc  "${SHIM_DIR}/x86_64-pc-linux-gnu-gcc"
-    ln -sf /usr/bin/g++  "${SHIM_DIR}/x86_64-pc-linux-gnu-g++"
-    ln -sf /usr/bin/gcc  "${SHIM_DIR}/x86_64-unknown-linux-gnu-gcc"
-    ln -sf /usr/bin/g++  "${SHIM_DIR}/x86_64-unknown-linux-gnu-g++"
+    ln -sf /usr/bin/gcc  "$HOME/bin/x86_64-pc-linux-gnu-gcc"
+    ln -sf /usr/bin/g++  "$HOME/bin/x86_64-pc-linux-gnu-g++"
+    ln -sf /usr/bin/gcc  "$HOME/bin/x86_64-unknown-linux-gnu-gcc"
+    ln -sf /usr/bin/g++  "$HOME/bin/x86_64-unknown-linux-gnu-g++"
 
-    # /run/host/usr/bin/rsync segfaults in the Flatpak due to glibc/ABI mismatch
-    # even with LD_LIBRARY_PATH pointing to host libs. Use flatpak-spawn --host
-    # to run rsync on the host side where its library environment is intact.
-    # Write to $HOME/bin (persistent) rather than SHIM_DIR (deleted on EXIT).
-    # This is critical for --nohup builds: the script exits (removing SHIM_DIR)
-    # while the background make is still running and needs rsync.
+    # /run/host/usr/bin/rsync segfaults in the Flatpak due to glibc/ABI mismatch.
+    # Use flatpak-spawn --host to run rsync on the host side.
     if [ -x "/usr/bin/flatpak-spawn" ] && [ -f "/run/host/usr/bin/rsync" ]; then
-        mkdir -p "$HOME/bin"
         cat > "$HOME/bin/rsync" << 'RSYNC_EOF'
 #!/bin/bash
 exec /usr/bin/flatpak-spawn --host rsync "$@"
@@ -95,8 +85,7 @@ RSYNC_EOF
     fi
 fi
 
-export PATH="${SHIM_DIR}:$HOME/bin:${PATH}"
-trap 'rm -rf "${SHIM_DIR}"' EXIT
+export PATH="$HOME/bin:${PATH}"
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
