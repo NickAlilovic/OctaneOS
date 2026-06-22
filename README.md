@@ -97,14 +97,14 @@ OctaneOS manages three distinct play modes automatically — no configuration re
 
 ## Download
 
-**[OctaneOS v0.2.4 — Radxa Cubie A7S](https://github.com/GameOctane/OctaneOS/releases/tag/v0.2.4)**
+**[OctaneOS v0.4.0-alpha — Radxa Cubie A7S](https://github.com/GameOctane/OctaneOS/releases/tag/v0.4.0-alpha)**
 
 **Windows** — Use [Balena Etcher](https://etcher.balena.io). Flash the `.img.gz` directly — no need to decompress.
 
 **Linux / Mac**
 ```
-gunzip OctaneOS-a733-cubie-a7s-43-20260531.img.gz
-dd if=OctaneOS-a733-cubie-a7s-43-20260531.img of=/dev/sdX bs=4M status=progress
+gunzip OctaneOS-a733-cubie-a7s-43-20260621.img.gz
+dd if=OctaneOS-a733-cubie-a7s-43-20260621.img of=/dev/sdX bs=4M status=progress
 ```
 
 Replace `/dev/sdX` with your SD card device. Verify with the included `.md5` or `.sha256` file before flashing.
@@ -128,11 +128,13 @@ Replace `/dev/sdX` with your SD card device. Verify with the included `.md5` or 
 | OctaneOS booting on Cubie A7S hardware | ✅ Complete |
 | USB-C DisplayPort Alt Mode display output | ✅ Complete |
 | USB-A host ports (controllers, keyboards, mice) | ✅ Complete |
-| Wired controller input | ✅ Complete |
 | Gigabit Ethernet | ✅ Complete |
 | CPU frequency scaling (A55 up to 1.8GHz, A76 up to 2.0GHz) | ✅ Complete |
 | 120Hz DisplayPort output | ✅ Complete |
-| EmulationStation launching | 🚧 In Progress |
+| PowerVR BXM-4-64 GPU driver loading | ✅ Complete |
+| Batocera userspace + overlayfs booting | ✅ Complete |
+| EmulationStation launching | ✅ Complete |
+| Wired controller input (USB HID + xpad) | 🚧 In Progress |
 | First ROM running | ⏳ Pending |
 | RetroAchievements configured | ⏳ Pending |
 | Three mode system | ⏳ Pending |
