@@ -1,0 +1,105 @@
+#!/bin/sh
+
+. /etc/profile.d/25-language.sh
+
+# Add the keyboard details to the environment variable
+LABWC_ENV_FILE="/userdata/system/.config/labwc/environment"
+echo "XKB_DEFAULT_LAYOUT=$XKB_DEFAULT_LAYOUT" > "$LABWC_ENV_FILE"
+echo "XKB_DEFAULT_VARIANT=$XKB_DEFAULT_VARIANT" >> "$LABWC_ENV_FILE"
+
+# Allow startup from a user session where WAYLAND_DISPLAY is set,
+# e.g. to restart via /etc/init.d/S31emulationstation start
+unset WAYLAND_DISPLAY
+
+# Log and configuration file paths
+LOG_FILE="/userdata/system/logs/display.log"
+LABWC_CONF_DIR="/userdata/system/.config/labwc"
+LABWC_LOG_FILE="/var/log/labwc.log"
+
+mkdir -p /userdata/system/logs
+mkdir -p /var/run
+mkdir -p /var/log
+
+# Helper: write a message to the serial console directly.
+# /dev/console = tty1 (display), so init.d stdout never appears on serial.
+serial() { printf '[labwc-launch] %s\n' "$*" > /dev/ttyAS0 2>/dev/null; }
+
+serial "started (pid $$)"
+
+# GPU Selection Logic
+PRIME_PCI_ID=""
+
+# Check which Prime GPU was detected by the startup script
+if [ -f "/var/tmp/nvidia.prime" ]; then
+    PRIME_PCI_ID=$(cat /var/tmp/nvidia.prime)
+elif [ -f "/var/tmp/amd.prime" ]; then
+    PRIME_PCI_ID=$(cat /var/tmp/amd.prime)
+elif [ -f "/var/tmp/intel.prime" ]; then
+    PRIME_PCI_ID=$(cat /var/tmp/intel.prime)
+fi
+
+# If a Prime GPU was identified, we must find its /dev/dri/cardX path
+if [ -n "$PRIME_PCI_ID" ]; then
+    # Convert "pci-0000_03_00_0" back to "0000:03:00.0" for sysfs matching
+    SYSFS_ID=$(echo "$PRIME_PCI_ID" | sed -e 's/^pci-//' -e 's/_/:/g' -e 's/:/./3')
+
+    # Find which card matches this PCI ID
+    for card in /sys/class/drm/card*; do
+        # Check if the device link points to our PCI ID
+        if readlink -f "$card/device" | grep -q "$SYSFS_ID"; then
+            CARD_NAME=$(basename "$card")
+            export WLR_DRM_DEVICES="/dev/dri/$CARD_NAME"
+            echo "Forcing Primary GPU: $WLR_DRM_DEVICES ($SYSFS_ID)" >> "$LOG_FILE"
+            break
+        fi
+    done
+fi
+
+# Wait for the DRM device to appear. On A733, sunxi-drm takes ~25s to bind
+# (deferred probe + USB-C AUX retry), but /init starts at ~13s, so labwc
+# would crash immediately without this wait.
+i=0
+while [ ! -e /dev/dri/card0 ] && [ $i -lt 60 ]; do
+    echo "Waiting for /dev/dri/card0... ($i s)" >> "$LOG_FILE"
+    [ $((i % 5)) -eq 0 ] && serial "waiting for /dev/dri/card0 (${i}s)..."
+    sleep 1
+    i=$((i + 1))
+done
+if [ ! -e /dev/dri/card0 ]; then
+    serial "ERROR: /dev/dri/card0 never appeared after 60s — aborting"
+    echo "ERROR: /dev/dri/card0 never appeared after 60s, aborting" >> "$LOG_FILE"
+    exit 1
+fi
+serial "/dev/dri/card0 appeared at ${i}s"
+echo "/dev/dri/card0 appeared at ${i}s" >> "$LOG_FILE"
+
+# Log which DRM connectors exist so we can confirm DP-1 is visible
+serial "DRM connectors: $(ls /sys/class/drm/ 2>/dev/null | grep -v '^card$' | tr '\n' ' ')"
+
+# Start Labwc with specified environment variable, logging output.
+# WLR_RENDERER=pixman and WLR_RENDERER_ALLOW_SOFTWARE=1 allow software
+# rendering via pixman when PowerVR GPU firmware is not yet loaded.
+echo "Starting Labwc with keyboard layout: $XKB_DEFAULT_LAYOUT" >> "$LOG_FILE"
+
+WLR_RENDERER=pixman WLR_RENDERER_ALLOW_SOFTWARE=1 WLR_LIBINPUT_NO_DEVICES=1 \
+    /usr/bin/labwc -d -C $LABWC_CONF_DIR > "$LABWC_LOG_FILE" 2>&1 &
+LABWC_PID=$!
+serial "labwc started with PID $LABWC_PID"
+
+# After 3s check if labwc is still alive; if it crashed dump the log to serial.
+sleep 3
+if kill -0 $LABWC_PID 2>/dev/null; then
+    serial "labwc PID $LABWC_PID alive after 3s — compositor should be up"
+else
+    serial "labwc CRASHED within 3s — dumping labwc.log:"
+    while IFS= read -r line; do serial "  $line"; done < "$LABWC_LOG_FILE"
+fi
+
+wait $LABWC_PID
+EXIT_CODE=$?
+serial "labwc exited with code $EXIT_CODE"
+echo "labwc exited with code $EXIT_CODE" >> "$LOG_FILE"
+if [ $EXIT_CODE -ne 0 ]; then
+    serial "--- last 30 lines of labwc.log ---"
+    tail -30 "$LABWC_LOG_FILE" | while IFS= read -r line; do serial "  $line"; done
+fi

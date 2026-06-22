@@ -1464,12 +1464,16 @@
 				regulator-min-microvolt = <500000>;
 				regulator-max-microvolt = <3400000>;
 				regulator-enable-ramp-delay = <1000>;
+				regulator-boot-on;
+				regulator-always-on;
 			};
 			reg_bldo2: bldo2 {
 				regulator-name = "axp8191-bldo2";
 				regulator-min-microvolt = <500000>;
 				regulator-max-microvolt = <3400000>;
 				regulator-enable-ramp-delay = <1000>;
+				regulator-boot-on;
+				regulator-always-on;
 			};
 			reg_bldo3: bldo3 {
 				regulator-name = "axp8191-bldo3";
@@ -1488,6 +1492,8 @@
 				regulator-min-microvolt = <500000>;
 				regulator-max-microvolt = <3400000>;
 				regulator-enable-ramp-delay = <1000>;
+				regulator-boot-on;
+				regulator-always-on;
 			};
 			reg_cldo1: cldo1 {
 				regulator-name = "axp8191-cldo1";
