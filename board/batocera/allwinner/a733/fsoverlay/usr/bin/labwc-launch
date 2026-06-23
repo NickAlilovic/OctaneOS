@@ -76,13 +76,32 @@ echo "/dev/dri/card0 appeared at ${i}s" >> "$LOG_FILE"
 # Log which DRM connectors exist so we can confirm DP-1 is visible
 serial "DRM connectors: $(ls /sys/class/drm/ 2>/dev/null | grep -v '^card$' | tr '\n' ' ')"
 
-# Start Labwc with specified environment variable, logging output.
-# WLR_RENDERER=pixman and WLR_RENDERER_ALLOW_SOFTWARE=1 allow software
-# rendering via pixman when PowerVR GPU firmware is not yet loaded.
-echo "Starting Labwc with keyboard layout: $XKB_DEFAULT_LAYOUT" >> "$LOG_FILE"
+# GPU detection: if enable-powervr-gpu has been run, the flag file holds
+# the LD_LIBRARY_PATH to prepend so wlroots finds the PowerVR EGL/GLES stack.
+PVR_FLAG="/userdata/system/pvr.enabled"
+PVR_LIB_PATH=""
+if [ -f "$PVR_FLAG" ]; then
+    PVR_LIB_PATH="$(cat "$PVR_FLAG")"
+    if [ -d "$PVR_LIB_PATH" ]; then
+        serial "PowerVR DDK detected — using WLR_RENDERER=gles2"
+        echo "PowerVR DDK at $PVR_LIB_PATH — using gles2 renderer" >> "$LOG_FILE"
+    else
+        serial "WARNING: pvr.enabled flag found but lib dir missing ($PVR_LIB_PATH) — falling back to pixman"
+        PVR_LIB_PATH=""
+    fi
+fi
 
-WLR_RENDERER=pixman WLR_RENDERER_ALLOW_SOFTWARE=1 WLR_LIBINPUT_NO_DEVICES=1 \
-    /usr/bin/labwc -d -C $LABWC_CONF_DIR > "$LABWC_LOG_FILE" 2>&1 &
+echo "Starting labwc (keyboard: $XKB_DEFAULT_LAYOUT)" >> "$LOG_FILE"
+
+if [ -n "$PVR_LIB_PATH" ]; then
+    LD_LIBRARY_PATH="${PVR_LIB_PATH}${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}" \
+    WLR_RENDERER=gles2 WLR_LIBINPUT_NO_DEVICES=1 \
+        /usr/bin/labwc -d -C $LABWC_CONF_DIR > "$LABWC_LOG_FILE" 2>&1 &
+else
+    serial "No GPU DDK — using pixman (software) renderer"
+    WLR_RENDERER=pixman WLR_RENDERER_ALLOW_SOFTWARE=1 WLR_LIBINPUT_NO_DEVICES=1 \
+        /usr/bin/labwc -d -C $LABWC_CONF_DIR > "$LABWC_LOG_FILE" 2>&1 &
+fi
 LABWC_PID=$!
 serial "labwc started with PID $LABWC_PID"
 
