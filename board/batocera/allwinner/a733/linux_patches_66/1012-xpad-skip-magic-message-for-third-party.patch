@@ -1,0 +1,54 @@
+From: Jason Germino <jasongermino@gmail.com>
+Date: Sun, 22 Jun 2026 00:00:00 +0000
+Subject: [PATCH] input: xpad: skip Xbox 360 vendor init message by default
+
+The "magic message" is a vendor control request (bRequest=0x01,
+bmRequestType=0xC1, wValue=0x0100) sent to EP0 when userspace first
+opens the input device.  The comment already notes it is only needed by
+"some" third-party Xbox 360 controllers.
+
+8BitDo SN30 Pro+ in X-input mode stalls this request (returns EREMOTEIO)
+and then repeatedly resets its USB connection on Allwinner A733 with the
+BSP EHCI TT controller.  The controller worked on kernel 5.15 BSP but
+regressed on 6.6 BSP, indicating the EP0 STALL/TT recovery path changed.
+
+Add skip_magic_message (default: true) so the control transfer is not
+sent.  Controllers that need it can disable the skip with:
+  xpad.skip_magic_message=0
+
+Signed-off-by: Jason Germino <jasongermino@gmail.com>
+---
+ drivers/input/joystick/xpad.c | 14 ++++++++++++--
+ 1 file changed, 12 insertions(+), 2 deletions(-)
+
+diff --git a/drivers/input/joystick/xpad.c b/drivers/input/joystick/xpad.c
+--- a/drivers/input/joystick/xpad.c
++++ b/drivers/input/joystick/xpad.c
+@@ -117,6 +117,12 @@
+ module_param(sticks_to_null, bool, S_IRUGO);
+ MODULE_PARM_DESC(sticks_to_null, "Do not map sticks at all for unknown pads");
+
++static bool skip_magic_message = true;
++module_param(skip_magic_message, bool, S_IRUGO | S_IWUSR);
++MODULE_PARM_DESC(skip_magic_message,
++	"Skip Xbox 360 vendor init control message (default on); some third-party "
++	"controllers stall it and then reset their USB connection");
++
+ static bool auto_poweroff = true;
+ module_param(auto_poweroff, bool, S_IWUSR | S_IRUGO);
+ MODULE_PARM_DESC(auto_poweroff, "Power off wireless controllers on suspend");
+@@ -1794,10 +1800,12 @@
+ 			return error;
+ 		}
+ 	}
+-	if (xpad->xtype == XTYPE_XBOX360) {
++	if (xpad->xtype == XTYPE_XBOX360 && !skip_magic_message) {
+ 		/*
+ 		 * Some third-party controllers Xbox 360-style controllers
+-		 * require this message to finish initialization.
++		 * require this message to finish initialization.  Others (e.g.
++		 * 8BitDo in X-input mode) stall it and then reset their USB
++		 * connection.  Skipped by default via skip_magic_message.
+ 		 */
+ 		u8 dummy[20];
+
