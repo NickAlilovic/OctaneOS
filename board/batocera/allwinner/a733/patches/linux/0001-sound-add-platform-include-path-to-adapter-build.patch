@@ -1,0 +1,28 @@
+From: OctaneOS <octaneos@local>
+Date: Sat, 05 Jul 2026 00:00:00 +0000
+Subject: [PATCH] sound: add platform include path so adapter files find snd_sunxi_log.h
+
+adapter/snd_sunxi_adapter.c and adapter/snd_sunxi_pcm_adapter.c include
+"snd_sunxi_log.h" which lives in bsp/drivers/sound/platform/.  The
+platform Makefile adds the adapter/ directory to ccflags but not the
+platform/ directory itself, so the build fails with:
+
+  fatal error: snd_sunxi_log.h: No such file or directory
+
+Add the platform directory to ccflags so the include resolves correctly.
+
+---
+ bsp/drivers/sound/platform/Makefile | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/bsp/drivers/sound/platform/Makefile b/bsp/drivers/sound/platform/Makefile
+index aaaaaa1..bbbbbbb 100644
+--- a/bsp/drivers/sound/platform/Makefile
++++ b/bsp/drivers/sound/platform/Makefile
+@@ -5,6 +5,7 @@
+ # Copyright(c) 2022-2027 Allwinnertech Co., Ltd.
+
+ ccflags-y += -I $(srctree)/bsp/drivers/sound/pa/
++ccflags-y += -I $(srctree)/bsp/drivers/sound/platform/
+ ccflags-y += -I $(srctree)/bsp/drivers/sound/adapter
+ ADPT_DIR := ../adapter
