@@ -2,9 +2,9 @@
 phase: active
 priority: high
 category: hardware
-progress: 82
-focus: WiFi working — SSH accessible, audio next
-next_milestone: Audio + RetroAchievements
+progress: 85
+focus: Audio drivers in — testing via USB-C DP to TV
+next_milestone: Audio confirmed + RetroAchievements
 milestone_distance: weeks
 community_pressure: high
 excitement: very high
@@ -32,13 +32,17 @@ OctaneOS is the foundation everything else in GameOctane sits on. GPU hardware a
 - [ ] Suppress spurious DP-1 hotplug events from sunxi-drm BSP
 - [ ] Shutdown — device stays powered on when ES shuts down
 
-## What just shipped (v0.5.1-alpha)
-WiFi 6 working. aic8800 USB driver was built against kernel 5.15.147 but board runs 6.6.98 — vermagic mismatch silently prevented the module from loading. Rebuilt against 6.6 kernel headers. WiFi connects, SSIDs visible.
+## What just shipped (v0.5.2-alpha)
+BSP audio drivers enabled for USB-C DisplayPort audio output.
 
-Also: SSH key auth baked into fsoverlay (`root/.ssh/authorized_keys`), debug env vars removed from labwc-launch.
+Audio path: RetroArch/ES → ALSA → I2S3 DMA (sunxi-snd-plat-i2s) → eDP0 DAI (already in DRM) → Cadence SERDES → USB-C DP → TV.
+
+New kernel modules: snd_soc_sunxi_i2s, snd_soc_sunxi_codec_hdmi, snd_soc_sunxi_common, snd_soc_sunxi_machine, snd_soc_sunxi_pcm.
+
+BSP Makefile bug fixed: platform/ not in ccflags → adapter/*.c couldn't find snd_sunxi_log.h. Patch at board/batocera/allwinner/a733/patches/linux/.
 
 ## Resume here
-WiFi works. SSH accessible at device IP via key auth (next flash). Audio not yet investigated — `aplay -l` via SSH will tell us immediately if the kernel sees a sound card. Controller disconnect is intermittent (~130s intervals, likely 8BitDo's own sleep timer). Focus: audio, then RetroAchievements now that network is live.
+Audio in — needs boot test to confirm `aplay -l` shows a sound card. SSH key auth baked in (flash new image → `ssh root@<ip>` works). Controller disconnect intermittent (~130s, likely 8BitDo sleep timer). Community tester (AR glasses) seeing no display + no ethernet — suspect AR glasses hanging HUSB311/DWC3 during boot negotiation.
 
 ## Last session
-2026-07-04: WiFi fixed (boot 88). aic8800 rebuilt against 6.6.98. SSH key auth added to fsoverlay. GPU debug env vars cleaned up. Released v0.5.1-alpha.
+2026-07-05: Audio drivers enabled (v0.5.2-alpha). Community tester on Discord reports no display with AR glasses — investigating whether glasses cause boot hang.
