@@ -1,0 +1,20 @@
+#!/bin/sh
+# OctaneOS init: install dev SSH key to the correct path.
+# Root home in Batocera is /userdata/system — Dropbear looks there for
+# authorized_keys, not /root/.ssh. Runs after S12populateshare.
+
+DEV_KEY="ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIEmEFho+A+VIZNyOogCAiL2ZpGoGFY8v8Fu4/TdwYb4u octaneos-dev"
+
+case "$1" in
+  start)
+    SSH_DIR=/userdata/system/.ssh
+    AUTH_KEYS=$SSH_DIR/authorized_keys
+    mkdir -p -m 0700 "$SSH_DIR"
+    if ! grep -qF "octaneos-dev" "$AUTH_KEYS" 2>/dev/null; then
+        echo "$DEV_KEY" >> "$AUTH_KEYS"
+        chmod 0600 "$AUTH_KEYS"
+    fi
+    ;;
+esac
+
+exit 0
