@@ -32,8 +32,10 @@ OctaneOS is the foundation everything else in GameOctane sits on. GPU hardware a
 - [ ] Suppress spurious DP-1 hotplug events from sunxi-drm BSP
 - [ ] Shutdown — device stays powered on when ES shuts down
 
-## What just shipped (v0.5.2-alpha)
-BSP audio drivers enabled for USB-C DisplayPort audio output.
+## What just shipped (v0.5.3-alpha)
+SSH fixed. Broken in every prior release due to two bugs: empty /etc/shadow (PAM rejected all password auth) and wrong authorized_keys path (key was in /root/.ssh, Dropbear reads /userdata/system/.ssh). Community testers: ssh root@<ip>, password linux. Devs: key auth works.
+
+Also includes audio drivers from v0.5.2-alpha.
 
 Audio path: RetroArch/ES → ALSA → I2S3 DMA (sunxi-snd-plat-i2s) → eDP0 DAI (already in DRM) → Cadence SERDES → USB-C DP → TV.
 
