@@ -7,6 +7,16 @@ DEV_KEY="ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIEmEFho+A+VIZNyOogCAiL2ZpGoGFY8v8Fu
 
 case "$1" in
   start)
+    # Batocera sets root shell to /bin/dash; profile scripts use bash syntax → Bad substitution
+    sed -i 's|:/bin/dash$|:/bin/bash|' /etc/passwd
+
+    # S26system falls back to first 2 chars of system.language ("en" from en_US) when
+    # system.kblayout is unset. "en" is not a valid loadkeys layout; "us" is correct.
+    BATOCERA_CONF=/userdata/system/batocera.conf
+    if ! grep -q "^system.kblayout=" "$BATOCERA_CONF" 2>/dev/null; then
+        echo "system.kblayout=us" >> "$BATOCERA_CONF"
+    fi
+
     SSH_DIR=/userdata/system/.ssh
     AUTH_KEYS=$SSH_DIR/authorized_keys
     mkdir -p -m 0700 "$SSH_DIR"

@@ -30,21 +30,21 @@ OctaneOS is the foundation everything else in GameOctane sits on. GPU hardware a
 - [ ] GameOctane companion app integration
 - [ ] 8BitDo controller disconnect fix (intermittent, ~130s interval — likely controller sleep timer)
 - [ ] Suppress spurious DP-1 hotplug events from sunxi-drm BSP
-- [ ] Shutdown — device stays powered on when ES shuts down
+- [ ] Audio — aplay -l returns no soundcards; machine driver failing (simple_dai_link_of errors)
 
-## What just shipped (v0.5.3-alpha)
-SSH fixed. Broken in every prior release due to two bugs: empty /etc/shadow (PAM rejected all password auth) and wrong authorized_keys path (key was in /root/.ssh, Dropbear reads /userdata/system/.ssh). Community testers: ssh root@<ip>, password linux. Devs: key auth works.
+## What just shipped (v0.5.4-alpha)
+Three fixes based on community tester feedback:
 
-Also includes audio drivers from v0.5.2-alpha.
+**Bash shell**: Root shell was /bin/dash; Batocera profile scripts use bash syntax → "Bad substitution" on every login. S13octane-init now patches /etc/passwd to use /bin/bash at boot.
 
-Audio path: RetroArch/ES → ALSA → I2S3 DMA (sunxi-snd-plat-i2s) → eDP0 DAI (already in DRM) → Cadence SERDES → USB-C DP → TV.
+**US keyboard layout**: S26system fell back to first 2 chars of system.language ("en" from en_US) when system.kblayout unset. "en" is not a valid loadkeys layout; "us" is. S13octane-init now writes kblayout=us to batocera.conf if not already set.
 
-New kernel modules: snd_soc_sunxi_i2s, snd_soc_sunxi_codec_hdmi, snd_soc_sunxi_common, snd_soc_sunxi_machine, snd_soc_sunxi_pcm.
+**Clean shutdown**: AXP8191 PMIC poweroff wrote to register 0x32 (LDO4 voltage) instead of 0x55 (poweroff trigger). Kernel patch adds AXP8191_ID branch in axp20x_power_off() to use the correct register.
 
-BSP Makefile bug fixed: platform/ not in ccflags → adapter/*.c couldn't find snd_sunxi_log.h. Patch at board/batocera/allwinner/a733/patches/linux/.
+Also includes everything from v0.5.3-alpha (SSH, audio drivers).
 
 ## Resume here
-Audio in — needs boot test to confirm `aplay -l` shows a sound card. SSH key auth baked in (flash new image → `ssh root@<ip>` works). Controller disconnect intermittent (~130s, likely 8BitDo sleep timer). Community tester (AR glasses) seeing no display + no ethernet — suspect AR glasses hanging HUSB311/DWC3 during boot negotiation.
+v0.5.4-alpha: bash + xkb + shutdown fixes. Audio: `aplay -l` shows no soundcards — machine driver not registering. Need `dmesg | grep -iE 'snd|audio|dai'` from Amish to find the failing DAI link.
 
 ## Last session
-2026-07-05: Audio drivers enabled (v0.5.2-alpha). Community tester on Discord reports no display with AR glasses — investigating whether glasses cause boot hang.
+2026-07-06: v0.5.4-alpha built. Audio confirmed broken (no soundcards). Need dmesg to debug simple_dai_link_of failures.
