@@ -3,7 +3,7 @@ phase: active
 priority: high
 category: hardware
 progress: 85
-focus: Audio codec built-in fix + CPU info display fix (v0.5.5)
+focus: Audio MODULE_ALIAS fix + CPU info display fix (v0.5.5)
 next_milestone: Audio confirmed working + RetroAchievements
 milestone_distance: weeks
 community_pressure: high
@@ -36,7 +36,7 @@ OctaneOS is the foundation everything else in GameOctane sits on. GPU hardware a
 Bash shell, US keyboard layout, AXP8191 clean shutdown, audio drivers in (SND_SOC_SUNXI_CODEC_AV=m). Audio still not working — see v0.5.5 fix below.
 
 ## What's in v0.5.5-alpha (building now)
-**Audio fix (root cause)**: SND_SOC_SUNXI_CODEC_AV had no MODULE_ALIAS in the source — udev could never auto-load it. Machine driver hit EPROBE_DEFER forever. Fix: =y (built-in). Registers at late_initcall before any modules load; platform device created by DRM EDP driver immediately matched.
+**Audio fix (root cause)**: SND_SOC_SUNXI_CODEC_AV had no MODULE_ALIAS in the BSP source — udev could never auto-load it when the DRM EDP driver created the platform device. Machine driver hit EPROBE_DEFER forever. Fix: added MODULE_ALIAS("platform:sunxi-snd-codec-av") to snd_sunxi_codec_av.c so depmod generates the alias and udev triggers modprobe at the right moment.
 
 **batocera-info CPU display**: Script showed "CPU Cores: 6" on A733 (8-core). Bug: sysfs fallback used physical_package_id (all 0 on single-SoC ARM) + core_id — A76 core_ids 0-1 collided with A55 core_ids 0-1 → 6 unique pairs. Fix: try cluster_id first (A55=0, A76=1). Now shows 8 cores + two clusters with correct frequencies.
 
@@ -44,4 +44,4 @@ Bash shell, US keyboard layout, AXP8191 clean shutdown, audio drivers in (SND_SO
 v0.5.5-alpha building. Verify: aplay -l shows allwinner-edp card, CPU Cores shows 8, CPU Cluster 1: 6 cores @ 1800 MHz / CPU Cluster 2: 2 cores @ 2000 MHz.
 
 ## Last session
-2026-07-07: Audio root cause found — no MODULE_ALIAS on snd_soc_sunxi_codec_av. Fixed =m→=y. batocera-info fsoverlay override for CPU core count and frequency display.
+2026-07-07/08: Audio root cause — no MODULE_ALIAS on snd_soc_sunxi_codec_av (=y blocked by Kconfig if-block). Added MODULE_ALIAS to BSP source. batocera-info fsoverlay override for CPU core count and frequency display. Released v0.5.5-alpha.

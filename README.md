@@ -97,7 +97,7 @@ OctaneOS manages three distinct play modes automatically — no configuration re
 
 ## Download
 
-**[OctaneOS v0.5.4-alpha — Radxa Cubie A7S](https://github.com/GameOctane/OctaneOS/releases/tag/v0.5.4-alpha)**
+**[OctaneOS v0.5.5-alpha — Radxa Cubie A7S](https://github.com/GameOctane/OctaneOS/releases/tag/v0.5.5-alpha)**
 
 **Windows** — Use [Balena Etcher](https://etcher.balena.io). Flash the `.img.gz` directly — no need to decompress.
 
