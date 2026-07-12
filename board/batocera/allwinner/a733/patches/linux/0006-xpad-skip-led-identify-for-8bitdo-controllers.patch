@@ -1,0 +1,37 @@
+From: OctaneOS <octaneos@local>
+Date: Sat, 12 Jul 2026 00:00:00 +0000
+Subject: [PATCH] input: xpad: skip LED identify for 8BitDo controllers
+
+8BitDo controllers masquerade as the Microsoft X-Box 360 pad (045e:028e),
+causing xpad to treat them as XTYPE_XBOX360 and fire the LED identify
+command 2 seconds after connect. 8BitDo NAKs this command indefinitely
+(it does not implement the Xbox 360 LED protocol). The BSP added a 5-second
+watchdog that kills the pending URB to stop the NAK flood, but usb_kill_urb
+causes the 8BitDo to disconnect and reconnect — triggering the cycle again.
+
+Fix: detect 8BitDo by manufacturer string in xpad_led_probe and return
+early, skipping LED setup entirely. This is safe because 8BitDo controllers
+enumerate correctly without LED management; they just need input events.
+
+Signed-off-by: OctaneOS <octaneos@local>
+---
+ drivers/input/joystick/xpad.c | 7 +++++++
+ 1 file changed, 7 insertions(+)
+
+diff --git a/drivers/input/joystick/xpad.c b/drivers/input/joystick/xpad.c
+--- a/drivers/input/joystick/xpad.c
++++ b/drivers/input/joystick/xpad.c
+@@ -1762,6 +1762,13 @@ static int xpad_led_probe(struct usb_xpad *xpad)
+ 	if (xpad->xtype != XTYPE_XBOX360 && xpad->xtype != XTYPE_XBOX360W)
+ 		return 0;
+
++	/* 8BitDo controllers masquerade as 045e:028e (Xbox 360) but NAK the
++	 * LED identify command. The URB kill in irq_out_cancel_work causes them
++	 * to disconnect. Skip LED setup entirely for 8BitDo controllers. */
++	if (xpad->udev->manufacturer &&
++	    strstr(xpad->udev->manufacturer, "8BitDo"))
++		return 0;
++
+ 	xpad->led = led = kzalloc(sizeof(struct xpad_led), GFP_KERNEL);
+ 	if (!led)
+ 		return -ENOMEM;
