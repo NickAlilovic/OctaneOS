@@ -1,0 +1,61 @@
+From: OctaneOS <octaneos@local>
+Date: Sat, 12 Jul 2026 00:00:00 +0000
+Subject: [PATCH] drm: edp: pre-configure audio hardware in encoder_atomic_enable
+
+When EmulationStation takes over KMS on boot, it triggers an
+encoder_atomic_disable -> encoder_atomic_enable cycle. The disable path
+(drm_edp_output_disable) disables the EDP pixel clock, which resets all
+trilinear DP14 controller registers to zero -- including TR_SEC0_AUDIO_ENABLE
+(0x900) and the audio config registers (CHANNEL_CNT, MAUD, NAUD, CLOCK_MODE).
+
+PipeWire's PCM substream is already open from its initial startup at this
+point. WirePlumber does not close and reopen the PCM on extcon
+JACK_VIDEO_OUT PLUGIN -- it keeps the PCM open and re-routes audio.
+So audio_startup() is never called again after the register reset,
+leaving TR_SEC0_AUDIO_ENABLE=0 and audio dead.
+
+Audio only recovers when the "stop music on screensaver" setting forces
+PipeWire to explicitly close the PCM (audio_shutdown), then reopen it on
+wake (audio_startup -> hw_params -> full register init).
+
+Confirmed via live /dev/mem reads on hardware:
+  before screensaver wake: TR_SEC0_AUDIO_ENABLE=0x00000002 (muted, bit0=0)
+  after  screensaver wake: TR_SEC0_AUDIO_ENABLE=0x00000001 (enabled, unmuted)
+
+Fix: after the display link is established in encoder_atomic_enable, directly
+pre-configure the EDP audio hardware with 48kHz stereo I2S defaults. This
+ensures TR_SEC0_AUDIO_ENABLE and the audio config registers are valid after
+the clock-on / link-train sequence, regardless of PipeWire PCM open/close
+state. PipeWire hw_params overwrites these with actual negotiated params
+when the PCM next cycles normally (e.g. screensaver stop-music + wake).
+
+Signed-off-by: OctaneOS <octaneos@local>
+---
+ bsp/drivers/drm/sunxi_drm_edp.c | 14 ++++++++++++++
+ 1 file changed, 14 insertions(+)
+
+--- a/bsp/drivers/drm/sunxi_drm_edp.c
++++ b/bsp/drivers/drm/sunxi_drm_edp.c
+@@ -3915,8 +3915,22 @@
+ 
+ 	/* ensure edp audio always enable after video, avoid display-audio async issue */
+ 	extcon_set_state_sync(drm_edp->extcon_edp, EXTCON_JACK_VIDEO_OUT, EDP_HPD_PLUGIN);
+ 
++	/* Pre-configure EDP audio hardware for 48kHz stereo I2S. The
++	 * encoder_atomic_disable→enable cycle (triggered by ES KMS takeover)
++	 * resets all DP14 controller registers to zero via clock gate. PipeWire
++	 * keeps its PCM open across this cycle without re-calling audio_startup,
++	 * so TR_SEC0_AUDIO_ENABLE stays 0 and audio is silent until the PCM
++	 * is fully closed and reopened. Set known-good defaults here so audio
++	 * works immediately after display-enable. PipeWire hw_params overwrites
++	 * these when the PCM next cycles normally (e.g. screensaver wake). */
++	if (drm_edp->source_cap.audio_support) {
++		edp_hw_audio_enable(&drm_edp->edp_hw);
++		edp_hw_audio_config(&drm_edp->edp_hw, HDMI_I2S, 2, 24, 48000);
++		edp_hw_audio_mute(&drm_edp->edp_hw, false, 0);
++	}
++
+ 	drm_edp->is_enabled = true;
+ 	return;
+ FAIL:
+ 	DRM_DEBUG_DRIVER("%s fail!\n", __FUNCTION__);
