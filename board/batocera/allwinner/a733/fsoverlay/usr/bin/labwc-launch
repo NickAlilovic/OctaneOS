@@ -93,12 +93,39 @@ WAYLAND_OUTPUT=$(echo "$DISPLAY_CONN" | sed 's/^card[0-9]*-//')
 apply_edid_quirks() {
     local conn_path="/sys/class/drm/$DISPLAY_CONN"
     local edid_src="$conn_path/edid"
-    local edid_override="$conn_path/edid_override"
-    [ -f "$edid_src" ] || return
-    [ -w "$edid_override" ] || return
+    if [ ! -f "$edid_src" ]; then
+        serial "EDID quirk: no edid file at $edid_src — skipping"
+        echo "EDID quirk: no edid file at $edid_src — skipping" >> "$LOG_FILE"
+        return
+    fi
+
+    # Find the writable edid_override node. Kernel 5.5+ may expose it in sysfs;
+    # older BSP kernels may only have it in debugfs. Try both.
+    local card_num
+    card_num=$(echo "$DISPLAY_CARD" | tr -d 'card')
+    local edid_override=""
+    for candidate in \
+        "$conn_path/edid_override" \
+        "/sys/kernel/debug/dri/${card_num}/${WAYLAND_OUTPUT}/edid_override" \
+        "/sys/kernel/debug/dri/${card_num}/edid_override"; do
+        if [ -w "$candidate" ]; then
+            edid_override="$candidate"
+            break
+        fi
+    done
+
+    if [ -z "$edid_override" ]; then
+        serial "EDID quirk: no writable edid_override found — kernel may not support runtime EDID override"
+        echo "EDID quirk: no writable edid_override found (checked sysfs + debugfs)" >> "$LOG_FILE"
+        return
+    fi
+    serial "EDID quirk: override node: $edid_override"
+    echo "EDID quirk: override node: $edid_override" >> "$LOG_FILE"
+
     # Read manufacturer ID bytes 8-9 as a hex string (2 bytes, no separator)
     local mfr
     mfr=$(od -An -tx1 -j8 -N2 "$edid_src" 2>/dev/null | tr -d ' \n')
+    echo "EDID quirk: manufacturer id=$mfr" >> "$LOG_FILE"
     case "$mfr" in
         506c)
             # TCL / Technical Concepts Ltd SmartGlasses: EDID monitor range caps
@@ -110,8 +137,14 @@ apply_edid_quirks() {
                 cat "$quirk_edid" > "$edid_override" 2>/dev/null \
                     && serial "EDID quirk: SmartGlasses 120Hz override applied" \
                     && echo "EDID quirk: SmartGlasses 120Hz override applied" >> "$LOG_FILE" \
-                    || serial "EDID quirk: SmartGlasses override write failed (ignored)"
+                    || { serial "EDID quirk: SmartGlasses override write failed"; echo "EDID quirk: override write failed" >> "$LOG_FILE"; }
+            else
+                serial "EDID quirk: SmartGlasses firmware file missing: $quirk_edid"
+                echo "EDID quirk: firmware file missing: $quirk_edid" >> "$LOG_FILE"
             fi
+            ;;
+        *)
+            echo "EDID quirk: manufacturer $mfr — no quirk needed" >> "$LOG_FILE"
             ;;
     esac
 }
