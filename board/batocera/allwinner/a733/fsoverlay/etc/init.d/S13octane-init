@@ -63,6 +63,24 @@ case "$1" in
         echo "$TZ_SETTING" > /etc/timezone
     fi
 
+    # Enable RetroAchievements by default. The user just needs to add their
+    # retroachievements.org credentials via Game Settings in the ES menu.
+    # Hardcore mode off by default — friendlier for first-time users.
+    if ! grep -q "^global.retroachievements=" "$BATOCERA_CONF" 2>/dev/null; then
+        echo "global.retroachievements=1" >> "$BATOCERA_CONF"
+    fi
+    if ! grep -q "^global.retroachievements.hardcore=" "$BATOCERA_CONF" 2>/dev/null; then
+        echo "global.retroachievements.hardcore=0" >> "$BATOCERA_CONF"
+    fi
+
+    # Install ROM Transfer port entry. Copies from squashfs template so it
+    # survives OS upgrades — always reflects the current version of the script.
+    PORTS_DIR=/userdata/roms/ports
+    TRANSFER_SCRIPT="$PORTS_DIR/ROM Transfer.sh"
+    mkdir -p "$PORTS_DIR"
+    cp /usr/share/octane/rom-transfer.sh "$TRANSFER_SCRIPT"
+    chmod +x "$TRANSFER_SCRIPT"
+
     SSH_DIR=/userdata/system/.ssh
     AUTH_KEYS=$SSH_DIR/authorized_keys
     mkdir -p -m 0700 "$SSH_DIR"
