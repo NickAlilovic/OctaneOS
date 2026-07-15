@@ -16,6 +16,9 @@ case "$1" in
     if ! grep -q "^system.kblayout=" "$BATOCERA_CONF" 2>/dev/null; then
         echo "system.kblayout=us" >> "$BATOCERA_CONF"
     fi
+    if ! grep -q "^system.hostname=" "$BATOCERA_CONF" 2>/dev/null; then
+        echo "system.hostname=OctaneOS" >> "$BATOCERA_CONF"
+    fi
 
     # Disable the ES screensaver. The default screensaver fires after 5 min idle and
     # attempts video playback which hangs the compositor on A733 (no HW video decode).
